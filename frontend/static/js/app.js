@@ -63,6 +63,56 @@ function switchPanel(panelName) {
 $("navResBtn").addEventListener("click",  () => switchPanel("reservations"));
 $("navDashBtn").addEventListener("click", () => switchPanel("dashboard"));
 
+// Home button (brand logo)
+$("homeBtn").addEventListener("click", (e) => { e.preventDefault(); switchPanel("search"); });
+
+// ─── Side Drawer ─────────────────────────────────────────────────────────────
+const sideDrawer  = $("sideDrawer");
+const drawerScrim = $("drawerScrim");
+
+function openDrawer()  {
+  sideDrawer.classList.add("open");
+  drawerScrim.classList.add("open");
+  $("menuToggle").setAttribute("aria-expanded", "true");
+}
+function closeDrawer() {
+  sideDrawer.classList.remove("open");
+  drawerScrim.classList.remove("open");
+  $("menuToggle").setAttribute("aria-expanded", "false");
+}
+
+$("menuToggle").addEventListener("click", openDrawer);
+$("drawerClose").addEventListener("click", closeDrawer);
+drawerScrim.addEventListener("click", closeDrawer);
+
+// Drawer panel links (Home, My Holds, Dashboard)
+sideDrawer.querySelectorAll(".drawer__item[data-panel]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    switchPanel(btn.dataset.panel);
+    closeDrawer();
+  });
+});
+
+// Drawer genre/filter links
+sideDrawer.querySelectorAll(".drawer__item[data-filter]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const filter = btn.dataset.filter;
+    switchPanel("search");
+    // Activate matching filter chip
+    document.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("filter-chip--active"));
+    const chip = document.querySelector(`.filter-chip[data-filter="${filter}"]`);
+    if (chip) chip.classList.add("filter-chip--active");
+    state.activeFilter = filter;
+    if (filter === "all") {
+      queryInput.value = "";
+    } else {
+      queryInput.value = filter;
+      doSearch();
+    }
+    closeDrawer();
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Filter chip strip
 // ─────────────────────────────────────────────────────────────────────────────

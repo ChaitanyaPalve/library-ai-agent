@@ -1156,6 +1156,122 @@ body {
   .orch-grid { grid-template-columns: 1fr; }
 }
 
+/* =============================================================================
+   HAMBURGER BUTTON
+   ============================================================================= */
+.nav__hamburger {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  border-radius: var(--rounded-md);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.15s;
+}
+.nav__hamburger:hover { background: var(--color-surface-card); }
+.nav__hamburger span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--color-ink);
+  border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+/* =============================================================================
+   SIDE DRAWER
+   ============================================================================= */
+.drawer-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 150;
+}
+.drawer-scrim.open { display: block; }
+
+.side-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 280px;
+  background: var(--color-canvas);
+  border-left: 1px solid var(--color-hairline);
+  z-index: 160;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.side-drawer.open { transform: translateX(0); }
+
+.drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg) var(--space-xl);
+  border-bottom: 1px solid var(--color-hairline);
+  height: 60px;
+  flex-shrink: 0;
+}
+.drawer__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.drawer__close { flex-shrink: 0; }
+
+.drawer__list {
+  list-style: none;
+  padding: var(--space-md) 0;
+  flex: 1;
+}
+
+.drawer__section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-ash);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: var(--space-sm) var(--space-xl);
+}
+
+.drawer__divider {
+  height: 1px;
+  background: var(--color-hairline);
+  margin: var(--space-sm) 0;
+}
+
+.drawer__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-ink);
+  padding: 10px var(--space-xl);
+  cursor: pointer;
+  transition: background 0.12s;
+  border-radius: 0;
+}
+.drawer__item:hover { background: var(--color-surface-card); }
+.drawer__item--home {
+  font-weight: 700;
+  font-size: 16px;
+}
+
 
 /* =============================================================================
    TOAST

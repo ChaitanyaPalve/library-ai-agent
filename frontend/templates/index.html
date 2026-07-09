@@ -16,7 +16,7 @@
     <div class="nav__inner">
 
       <!-- Brand wordmark -->
-      <a class="nav__brand" href="#" aria-label="Library AI home">
+      <a class="nav__brand" href="#" aria-label="Library AI home" id="homeBtn">
         <!-- Book logo -->
         <svg class="nav__logo" width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <rect width="32" height="32" rx="8" fill="#1a56db"/>
@@ -41,6 +41,11 @@
                  autocomplete="off" spellcheck="false" />
         </div>
       </div>
+
+      <!-- Hamburger -->
+      <button class="nav__hamburger" id="menuToggle" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
 
       <!-- Right cluster -->
       <div class="nav__actions">
@@ -214,6 +219,37 @@
       </div>
     </div>
   </div>
+
+  <!-- ══════════════════  SIDE DRAWER  ══════════════════ -->
+  <div id="drawerScrim" class="drawer-scrim"></div>
+  <nav id="sideDrawer" class="side-drawer" aria-label="Site navigation">
+    <div class="drawer__header">
+      <span class="drawer__title">Menu</span>
+      <button class="drawer__close btn-icon-circular" id="drawerClose" aria-label="Close menu">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M2 2l12 12M14 2L2 14" stroke="#000" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <ul class="drawer__list">
+      <li><button class="drawer__item drawer__item--home" data-panel="search">🏠 Home</button></li>
+      <li class="drawer__divider"></li>
+      <li class="drawer__section-label">Browse by Genre</li>
+      <li><button class="drawer__item" data-filter="all">All Books</button></li>
+      <li><button class="drawer__item" data-filter="machine learning">Machine Learning</button></li>
+      <li><button class="drawer__item" data-filter="data science">Data Science</button></li>
+      <li><button class="drawer__item" data-filter="algorithms">Algorithms</button></li>
+      <li><button class="drawer__item" data-filter="python">Python</button></li>
+      <li><button class="drawer__item" data-filter="NLP">NLP</button></li>
+      <li><button class="drawer__item" data-filter="database">Databases</button></li>
+      <li><button class="drawer__item" data-filter="networking">Networking</button></li>
+      <li><button class="drawer__item" data-filter="mathematics">Mathematics</button></li>
+      <li><button class="drawer__item" data-filter="cloud computing">Cloud</button></li>
+      <li class="drawer__divider"></li>
+      <li><button class="drawer__item" data-panel="reservations">My Holds</button></li>
+      <li><button class="drawer__item" data-panel="dashboard">Dashboard</button></li>
+    </ul>
+  </nav>
 
   <!-- Toast -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
