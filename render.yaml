@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: library-ai-agent
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:create_app() --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: FLASK_DEBUG
+        value: "false"
+      - key: MONGO_URI
+        sync: false             # Set in Render dashboard → Environment
+      - key: WATSON_NLU_API_KEY
+        sync: false
+      - key: WATSON_NLU_URL
+        sync: false
+      - key: WATSONX_URL
+        sync: false
+      - key: WATSONX_API_KEY
+        sync: false
+      - key: WATSONX_PROJECT_ID
+        sync: false
+      - key: WATSONX_MODEL_ID
+        value: "meta-llama/llama-3-3-70b-instruct"
+      - key: ROBO_HIGH_DEMAND_THRESHOLD
+        value: "10"
+      - key: ROBO_REORDER_THRESHOLD
+        value: "15"
+      - key: ROBO_MAX_HOLD_DAYS
+        value: "14"
+      - key: ENABLE_SCHEDULER
+        value: "false"
+      - key: SCHEDULER_INTERVAL_MINUTES
+        value: "30"

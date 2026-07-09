@@ -1,0 +1,17 @@
+flask>=3.0.0
+python-dotenv>=1.0.0
+gunicorn>=21.2.0         # production WSGI server (Render)
+
+# IBM Watson NLU
+ibm-watson>=8.1.0
+ibm-cloud-sdk-core>=3.20.0
+
+# IBM WatsonX AI
+ibm-watsonx-ai>=1.0.0
+
+# MongoDB
+pymongo>=4.6.0
+certifi>=2024.0.0    # CA bundle — fixes TLS on Windows / Python 3.12
+
+# Optional: APScheduler for Robo automation scheduling
+apscheduler>=3.10.0
