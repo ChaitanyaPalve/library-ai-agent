@@ -7,6 +7,7 @@ Provides functions to:
   - Reserve a book (or place on waitlist)
   - Cancel / complete a reservation
   - Record student queries for analytics
+  - Upsert student records (student_id + Firebase UID)
 
 All persistence is via MongoDB (models.db).
 """
@@ -82,19 +83,56 @@ def check_availability(book_id: str) -> dict:
 # Reservations
 # ---------------------------------------------------------------------------
 
+def validate_student_id(student_id: str) -> str | None:
+    """
+    Return an error string if *student_id* is invalid, else None.
+    Rules: non-empty, 2–20 chars, alphanumeric + hyphens/underscores only.
+    """
+    import re
+    if not student_id:
+        return "student_id is required"
+    if len(student_id) < 2 or len(student_id) > 20:
+        return "student_id must be 2–20 characters"
+    if not re.match(r"^[A-Za-z0-9_\-]+$", student_id):
+        return "student_id may only contain letters, digits, hyphens and underscores"
+    return None
+
+
 def reserve_book(student_id: str, book_id: str) -> dict:
     """
     Reserve a book for a student.
 
     - If copies are available  → status = "active",  decrement available_copies
     - If no copies available   → status = "waitlisted"
+    - If the student already has an active OR waitlisted hold → error (duplicate guard)
     Returns the reservation document with an "ai_message" placeholder.
     """
+    # Validate student ID before touching the database
+    id_error = validate_student_id(student_id)
+    if id_error:
+        return {"error": id_error}
+
     db = get_db()
     try:
         obj_id = ObjectId(book_id)
     except InvalidId:
         return {"error": "Invalid book ID"}
+
+    # ── Duplicate-hold guard ─────────────────────────────────────────────────
+    # A student must not hold both a reservation and a waitlist spot for the same book.
+    existing = db.reservations.find_one({
+        "student_id": student_id,
+        "book_id": obj_id,
+        "status": {"$in": ["active", "waitlisted"]},
+    })
+    if existing:
+        label = "reservation" if existing["status"] == "active" else "waitlist spot"
+        return {
+            "error": (
+                f"You already have an active {label} for this book. "
+                "Cancel it first if you want to change your hold type."
+            )
+        }
 
     # Atomically decrement if available
     book = db.books.find_one_and_update(
@@ -160,6 +198,35 @@ def cancel_reservation(reservation_id: str) -> dict:
 # Query logging
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Student persistence
+# ---------------------------------------------------------------------------
+
+def upsert_student(student_id: str, firebase_uid: str, email: str | None = None) -> dict:
+    """
+    Insert or update a student document keyed by *student_id*.
+    Called on sign-in to persist the Firebase UID alongside the student ID.
+    Returns the upserted document (without MongoDB _id).
+    """
+    db = get_db()
+    now = datetime.utcnow()
+    result = db.students.find_one_and_update(
+        {"student_id": student_id},
+        {
+            "$set": {
+                "firebase_uid": firebase_uid,
+                "email": email,
+                "updated_at": now,
+            },
+            "$setOnInsert": {"created_at": now},
+        },
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    result.pop("_id", None)
+    return result
+
+
 def log_query(student_id: str, raw_text: str, matched_book_ids: list) -> str:
     """Persist a student query and return the inserted document ID."""
     db = get_db()
@@ -180,6 +247,23 @@ def get_high_demand_books(threshold: int = 5, limit: int = 20) -> list[dict]:
         .sort("demand_score", -1)
         .limit(limit)
     )
+    results = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        results.append(doc)
+    return results
+
+
+def get_all_books(skip: int = 0, limit: int = 50, subject: str | None = None) -> list[dict]:
+    """
+    Return all books from the catalogue, optionally filtered by subject tag.
+    Sorted by title ascending.
+    """
+    db = get_db()
+    query: dict = {}
+    if subject and subject.lower() != "all":
+        query["subject_tags"] = {"$regex": subject, "$options": "i"}
+    cursor = db.books.find(query).sort("title", 1).skip(skip).limit(limit)
     results = []
     for doc in cursor:
         doc["_id"] = str(doc["_id"])

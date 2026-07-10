@@ -67,6 +67,9 @@ def ensure_indexes():
     # Reservations
     db.reservations.create_index([("book_id", ASCENDING)])
     db.reservations.create_index([("student_id", ASCENDING)])
+    # Students
+    db.students.create_index([("student_id", ASCENDING)], unique=True)
+    db.students.create_index([("firebase_uid", ASCENDING)])
     print("[db] Indexes ensured.")
 
 

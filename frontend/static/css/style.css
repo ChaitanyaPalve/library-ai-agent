@@ -3,7 +3,8 @@
    ============================================================================= */
 
 /* ── Design Tokens ──────────────────────────────────────────────────────────── */
-:root {
+:root,
+[data-theme="light"] {
   /* Brand — library blue */
   --color-primary:          #1a56db;
   --color-primary-hover:    #1648c0;
@@ -55,6 +56,33 @@
   /* Typography */
   --font: 'Inter', -apple-system, system-ui, 'Segoe UI', Roboto,
           'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ── Dark Theme Overrides ───────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-primary:          #3b82f6;
+  --color-primary-hover:    #2563eb;
+  --color-primary-pressed:  #1d4ed8;
+  --color-on-primary:       #ffffff;
+
+  --color-ink:              #f9fafb;
+  --color-body:             #d1d5db;
+  --color-mute:             #9ca3af;
+  --color-ash:              #6b7280;
+  --color-charcoal:         #e5e7eb;
+
+  --color-canvas:           #111827;
+  --color-surface-soft:     #1f2937;
+  --color-surface-card:     #374151;
+  --color-secondary-bg:     #374151;
+  --color-secondary-pressed:#4b5563;
+  --color-hairline:         #374151;
+  --color-hairline-soft:    #1f2937;
+
+  --color-error:            #f87171;
+  --color-success-deep:     #6ee7b7;
+  --color-success-pale:     #064e3b;
+  --color-focus-outer:      #3b82f6;
 }
 
 /* ── Reset ──────────────────────────────────────────────────────────────────── */
@@ -1357,4 +1385,211 @@ body {
     border-radius: var(--rounded-xl) var(--rounded-xl) 0 0;
     max-width: 100%;
   }
+}
+
+/* =============================================================================
+   LOGIN OVERLAY
+   ============================================================================= */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: var(--color-surface-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+}
+.login-overlay.hidden { display: none !important; }
+
+.login-card {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-xl);
+  padding: var(--space-xxl) 40px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+.login-brand__name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-bottom: 2px;
+}
+.login-sub {
+  font-size: 14px;
+  color: var(--color-mute);
+  margin-bottom: var(--space-sm);
+}
+
+.login-error {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: var(--rounded-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-size: 13px;
+  color: var(--color-error);
+  line-height: 1.5;
+}
+[data-theme="dark"] .login-error {
+  background: rgba(248,113,113,.15);
+  border-color: var(--color-error);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.field-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--color-ink);
+  background: var(--color-surface-card);
+  transition: border-color 0.15s, background 0.15s;
+}
+.field-input:focus {
+  outline: 2px solid var(--color-focus-outer);
+  outline-offset: 2px;
+  border-color: var(--color-primary);
+  background: var(--color-canvas);
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--color-ash);
+  font-size: 12px;
+  font-weight: 500;
+}
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-hairline);
+}
+
+.btn-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  height: 42px;
+  width: 100%;
+  padding: 0 16px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-google:hover  { background: var(--color-surface-card); }
+.btn-google:active { background: var(--color-secondary-bg); }
+
+.login-footer {
+  font-size: 12px;
+  color: var(--color-ash);
+  text-align: center;
+  margin-top: var(--space-xs);
+}
+
+/* =============================================================================
+   STUDENT ID ERROR
+   ============================================================================= */
+.student-id-wrap { position: relative; }
+
+.student-id-error {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  white-space: nowrap;
+  background: var(--color-error);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--rounded-sm);
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* =============================================================================
+   THEME-AWARE OVERRIDES
+   ============================================================================= */
+
+/* AI card adapts to dark theme */
+[data-theme="dark"] .ai-card {
+  background: rgba(59,130,246,.12);
+  border-color: rgba(59,130,246,.3);
+}
+[data-theme="dark"] .ai-card .ai-card__icon circle { fill: #3b82f6; }
+[data-theme="dark"] .ai-card .ai-card__icon path,
+[data-theme="dark"] .ai-card .ai-card__icon circle:last-child { stroke: #3b82f6; fill: #3b82f6; }
+
+/* NLU pills */
+[data-theme="dark"] .nlu-pill {
+  background: rgba(59,130,246,.15);
+  border-color: rgba(59,130,246,.3);
+  color: #93c5fd;
+}
+
+/* Demand score badge */
+[data-theme="dark"] .demand-score {
+  background: rgba(234,179,8,.15);
+  color: #fde68a;
+}
+
+/* Alert item */
+[data-theme="dark"] .alert-item {
+  background: rgba(252,211,77,.08);
+  border-color: rgba(252,211,77,.25);
+}
+
+/* Orch card success/fail bars */
+[data-theme="dark"] .orch-card__fix {
+  background: rgba(252,211,77,.1);
+  border-color: rgba(252,211,77,.3);
+  color: #fde68a;
+}
+[data-theme="dark"] .orch-card__badge--ok { background: rgba(16,185,129,.2); color: #6ee7b7; }
+[data-theme="dark"] .orch-card__badge--fail { background: rgba(239,68,68,.2); color: #fca5a5; }
+[data-theme="dark"] .status-chip--active { background: rgba(16,185,129,.2); color: #6ee7b7; }
+[data-theme="dark"] .status-chip--waitlisted { background: rgba(234,179,8,.15); color: #fde68a; }
+
+/* Explain summary */
+[data-theme="dark"] .explain-summary {
+  background: rgba(59,130,246,.1);
+  border-color: rgba(59,130,246,.3);
 }
