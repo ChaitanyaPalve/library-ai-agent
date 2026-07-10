@@ -18,10 +18,10 @@
 // State
 // ─────────────────────────────────────────────────────────────────────────────
 const state = {
-  studentId: "s001",
-  reservations: [],   // { id, bookId, bookTitle, bookAuthor, status, message }
+  studentId: sessionStorage.getItem("studentId") || "1234",
+  reservations: [],
   activeFilter: "all",
-  allBooksSubject: "all",
+  homeGenre: "all",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -29,33 +29,34 @@ const state = {
 // ─────────────────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 
-const searchBtn          = $("searchBtn");
-const queryInput         = $("queryInput");
-const studentIdInput     = $("studentId");
-const studentIdError     = $("studentIdError");
-const nluInsights        = $("nluInsights");
-const aiMessage          = $("aiMessage");
-const aiMessageText      = $("aiMessageText");
-const resultsSection     = $("resultsSection");
-const booksGrid          = $("booksGrid");
-const resultsTitle       = $("resultsTitle");
-const emptyState         = $("emptyState");
-const loadingState       = $("loadingState");
-const reserveModal       = $("reserveModal");
-const modalTitle         = $("modalTitle");
-const modalSubtitle      = $("modalSubtitle");
-const modalBody          = $("modalBody");
-const modalConfirm       = $("modalConfirm");
-const modalCancel        = $("modalCancel");
-const modalClose         = $("modalClose");
-const reservationsList   = $("reservationsList");
-const highDemandList     = $("highDemandList");
-const automationAlerts   = $("automationAlerts");
-const runRoboBtn         = $("runRoboBtn");
-const toastEl            = $("toast");
-const allBooksGrid       = $("allBooksGrid");
-const allBooksCount      = $("allBooksCount");
-const allBooksLoading    = $("allBooksLoading");
+const searchBtn         = $("searchBtn");
+const queryInput        = $("queryInput");
+const studentIdInput    = $("studentId");
+const studentIdError    = $("studentIdError");
+const nluInsights       = $("nluInsights");
+const aiMessage         = $("aiMessage");
+const aiMessageText     = $("aiMessageText");
+const resultsSection    = $("resultsSection");
+const booksGrid         = $("booksGrid");
+const resultsTitle      = $("resultsTitle");
+const emptyState        = $("emptyState");
+const loadingState      = $("loadingState");
+const reserveModal      = $("reserveModal");
+const modalTitle        = $("modalTitle");
+const modalSubtitle     = $("modalSubtitle");
+const modalBody         = $("modalBody");
+const modalConfirm      = $("modalConfirm");
+const modalCancel       = $("modalCancel");
+const modalClose        = $("modalClose");
+const reservationsList  = $("reservationsList");
+const highDemandList    = $("highDemandList");
+const automationAlerts  = $("automationAlerts");
+const runRoboBtn        = $("runRoboBtn");
+const toastEl           = $("toast");
+const homeBooksGrid     = $("homeBooksGrid");
+const homeBooksCount    = $("homeBooksCount");
+const homeBooksLoading  = $("homeBooksLoading");
+const homeBooksSection  = $("homeBooksSection");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Theme toggle  (persisted to localStorage)
@@ -85,29 +86,10 @@ themeToggle.addEventListener("click", () => {
   localStorage.setItem("theme", next);
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Student ID live validation
-// ─────────────────────────────────────────────────────────────────────────────
-const STUDENT_ID_RE = /^[A-Za-z0-9_\-]{2,20}$/;
-
 function validateStudentIdInput(value) {
   if (!value) return "Student ID is required";
-  if (value.length < 2 || value.length > 20) return "Must be 2–20 characters";
-  if (!STUDENT_ID_RE.test(value)) return "Letters, digits, hyphens, underscores only";
   return null;
 }
-
-studentIdInput.addEventListener("input", () => {
-  const err = validateStudentIdInput(studentIdInput.value.trim());
-  if (err) {
-    studentIdError.textContent = err;
-    studentIdError.classList.remove("hidden");
-    studentIdInput.style.borderColor = "var(--color-error)";
-  } else {
-    studentIdError.classList.add("hidden");
-    studentIdInput.style.borderColor = "";
-  }
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Panel navigation
@@ -118,12 +100,12 @@ function switchPanel(panelName) {
   if (target) target.classList.add("active");
   if (panelName === "reservations") renderReservations();
   if (panelName === "dashboard")    loadDashboard();
-  if (panelName === "books")        loadAllBooks();
+  if (panelName === "search")       { hideResults(); loadHomeBooks(state.homeGenre); }
 }
 
 $("navResBtn").addEventListener("click",   () => switchPanel("reservations"));
+$("navRecsBtn").addEventListener("click",  () => { switchPanel("recommendations"); loadRecommendations(); });
 $("navDashBtn").addEventListener("click",  () => switchPanel("dashboard"));
-$("navBooksBtn").addEventListener("click", () => switchPanel("books"));
 $("homeBtn").addEventListener("click", (e) => { e.preventDefault(); switchPanel("search"); });
 
 // ─── Side Drawer ─────────────────────────────────────────────────────────────
@@ -150,33 +132,30 @@ sideDrawer.querySelectorAll(".drawer__item[data-panel]").forEach((btn) => {
   btn.addEventListener("click", () => { switchPanel(btn.dataset.panel); closeDrawer(); });
 });
 
-// Drawer genre/filter links
-sideDrawer.querySelectorAll(".drawer__item[data-filter]").forEach((btn) => {
+// Drawer genre links
+sideDrawer.querySelectorAll(".drawer__item[data-genre]").forEach((btn) => {
   btn.addEventListener("click", () => {
-    const filter = btn.dataset.filter;
+    const genre = btn.dataset.genre;
     switchPanel("search");
-    document.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("filter-chip--active"));
-    const chip = document.querySelector(`.filter-chip[data-filter="${filter}"]`);
-    if (chip) chip.classList.add("filter-chip--active");
-    state.activeFilter = filter;
-    queryInput.value = filter === "all" ? "" : filter;
-    if (filter !== "all") doSearch();
+    setHomeGenre(genre);
     closeDrawer();
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Filter chip strip (search panel)
-// ─────────────────────────────────────────────────────────────────────────────
-document.querySelectorAll("#filterStrip .filter-chip").forEach((chip) => {
+// Unified genre strip — browse books & sync active state
+document.querySelectorAll("#homeGenreStrip .filter-chip").forEach((chip) => {
   chip.addEventListener("click", () => {
-    document.querySelectorAll("#filterStrip .filter-chip").forEach((c) => c.classList.remove("filter-chip--active"));
-    chip.classList.add("filter-chip--active");
-    const filter = chip.dataset.filter;
-    state.activeFilter = filter;
-    if (filter !== "all") { queryInput.value = filter; doSearch(); }
+    setHomeGenre(chip.dataset.genre);
   });
 });
+
+function setHomeGenre(genre) {
+  document.querySelectorAll("#homeGenreStrip .filter-chip").forEach((c) => c.classList.remove("filter-chip--active"));
+  const chip = document.querySelector(`#homeGenreStrip .filter-chip[data-genre="${genre}"]`);
+  if (chip) chip.classList.add("filter-chip--active");
+  state.homeGenre = genre;
+  loadHomeBooks(genre, true);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Search
@@ -186,22 +165,13 @@ queryInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(
 
 async function doSearch() {
   const query = queryInput.value.trim();
-  const sid   = studentIdInput.value.trim() || "anonymous";
-
-  // Validate student ID before API call
-  const idErr = validateStudentIdInput(sid);
-  if (idErr && sid !== "anonymous") {
-    showToast("Fix your Student ID before searching.", true);
-    studentIdInput.focus();
-    return;
-  }
-  state.studentId = sid;
-
   if (!query) return;
+  state.studentId = sessionStorage.getItem("studentId") || state.studentId || "anonymous";
 
   switchPanel("search");
   setLoading(true);
   hideResults();
+  homeBooksSection.classList.add("hidden");
 
   try {
     const res = await fetch("/api/search", {
@@ -230,6 +200,7 @@ async function doSearch() {
       booksGrid.innerHTML = data.books.map((b, i) => renderPinCard(b, i)).join("");
       resultsSection.classList.remove("hidden");
       attachReserveListeners(booksGrid);
+      attachTagListeners(booksGrid);
     } else {
       emptyState.classList.remove("hidden");
     }
@@ -241,49 +212,42 @@ async function doSearch() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// All Books panel
+// Home books loader (replaces old All Books panel)
 // ─────────────────────────────────────────────────────────────────────────────
-let _allBooksLoaded = false;
-let _allBooksSubjectLoaded = "all";
+let _homeBooksGenreLoaded = "";
 
-async function loadAllBooks(subject = state.allBooksSubject, force = false) {
-  if (!force && _allBooksLoaded && _allBooksSubjectLoaded === subject) return;
+async function loadHomeBooks(genre = "all", force = false) {
+  if (!force && _homeBooksGenreLoaded === genre) return;
 
-  allBooksLoading.classList.remove("hidden");
-  allBooksCount.classList.add("hidden");
-  allBooksGrid.innerHTML = "";
+  // Show skeleton placeholders while loading
+  homeBooksGrid.innerHTML = Array.from({length: 8}, () => `
+    <div class="skeleton-card">
+      <div class="sk-img skeleton"></div>
+      <div class="sk-line skeleton"></div>
+      <div class="sk-line sk-line--short skeleton"></div>
+    </div>`).join("");
+  homeBooksLoading.classList.remove("hidden");
+  homeBooksCount.textContent = "";
+  homeBooksSection.classList.remove("hidden");
 
   try {
-    const url = subject && subject !== "all"
-      ? `/api/books?subject=${encodeURIComponent(subject)}&limit=100`
-      : `/api/books?limit=100`;
+    const url = genre && genre !== "all"
+      ? `/api/books?subject=${encodeURIComponent(genre)}&limit=200`
+      : `/api/books?limit=200`;
     const res  = await fetch(url);
     const data = await res.json();
-    allBooksLoading.classList.add("hidden");
+    homeBooksLoading.classList.add("hidden");
 
-    allBooksCount.textContent = `${data.total} book${data.total !== 1 ? "s" : ""}`;
-    allBooksCount.classList.remove("hidden");
-    allBooksGrid.innerHTML = (data.books || []).map((b, i) => renderPinCard(b, i)).join("");
-    attachReserveListeners(allBooksGrid);
-
-    _allBooksLoaded = true;
-    _allBooksSubjectLoaded = subject;
+    homeBooksCount.textContent = `${data.total} book${data.total !== 1 ? "s" : ""}`;
+    homeBooksGrid.innerHTML = (data.books || []).map((b, i) => renderPinCard(b, i)).join("");
+    attachReserveListeners(homeBooksGrid);
+    attachTagListeners(homeBooksGrid);
+    _homeBooksGenreLoaded = genre;
   } catch {
-    allBooksLoading.classList.add("hidden");
-    showToast("Failed to load books catalogue.", true);
+    homeBooksLoading.classList.add("hidden");
+    showToast("Failed to load books.", true);
   }
 }
-
-// All Books subject filter chips
-document.querySelectorAll("#booksFilterStrip .filter-chip").forEach((chip) => {
-  chip.addEventListener("click", () => {
-    document.querySelectorAll("#booksFilterStrip .filter-chip").forEach((c) => c.classList.remove("filter-chip--active"));
-    chip.classList.add("filter-chip--active");
-    const subject = chip.dataset.subject || "all";
-    state.allBooksSubject = subject;
-    loadAllBooks(subject, true);
-  });
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pin card renderer
@@ -304,12 +268,16 @@ function renderPinCard(book, index) {
   const overlayPill = primaryTag
     ? `<div class="pin-card__overlay-pill">${esc(primaryTag)}</div>` : "";
   const tags = (book.subject_tags || []).slice(1, 4)
-    .map((t) => `<span class="pin-tag">${esc(t)}</span>`).join("");
+    .map((t) => `<span class="pin-tag" data-tag="${esc(t)}">${esc(t)}</span>`).join("");
 
   const badgeClass = avail ? "avail-badge--available" : "avail-badge--unavailable";
   const badgeText  = avail ? `✓ ${book.available_copies} available` : "✗ Unavailable";
   const btnClass   = avail ? "" : "btn-pin-action--waitlist";
   const btnText    = avail ? "Reserve" : "Waitlist";
+
+  const isbnText   = book.isbn ? `ISBN ${esc(book.isbn)}` : "";
+  const copiesText = `${book.total_copies || 1} cop${(book.total_copies || 1) === 1 ? "y" : "ies"} total`;
+  const quickInfo  = `<div class="pin-card__quick-info">${isbnText ? isbnText + " · " : ""}${copiesText}</div>`;
 
   return `
     <article class="pin-card pin-card--${ratio}" role="listitem"
@@ -318,6 +286,7 @@ function renderPinCard(book, index) {
         <div class="pin-card__thumb ${thumbClass}">${BOOK_SVG}</div>
         ${demandBadge}
         ${overlayPill}
+        ${quickInfo}
       </div>
       <div class="pin-card__meta">
         <div class="pin-card__title">${esc(book.title)}</div>
@@ -332,6 +301,12 @@ function renderPinCard(book, index) {
                 data-author="${esc(book.author)}"
                 data-avail="${avail}">
           ${btnText}
+        </button>
+        <button class="btn-pin-review"
+                data-id="${esc(book._id)}"
+                data-title="${esc(book.title)}"
+                aria-label="Read &amp; write reviews">
+          Reviews
         </button>
       </div>
     </article>`;
@@ -349,6 +324,30 @@ function attachReserveListeners(container = document) {
       );
     });
   });
+  container.querySelectorAll(".btn-pin-review").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openReviewsPanel(btn.dataset.id, btn.dataset.title);
+    });
+  });
+}
+
+// Tag clicks → filter books by that tag
+function attachTagListeners(container = document) {
+  container.querySelectorAll(".pin-tag[data-tag]").forEach((tag) => {
+    tag.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const genre = tag.dataset.tag;
+      // Try to match an existing genre chip; otherwise do a search
+      const chip = document.querySelector(`#homeGenreStrip .filter-chip[data-genre="${genre}"]`);
+      if (chip) {
+        setHomeGenre(genre);
+      } else {
+        queryInput.value = genre;
+        doSearch();
+      }
+    });
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -357,14 +356,7 @@ function attachReserveListeners(container = document) {
 let _pendingBookId = null;
 
 function openReserveModal(bookId, title, author, available) {
-  // Guard: validate student ID first
-  const sid = studentIdInput.value.trim();
-  const idErr = validateStudentIdInput(sid);
-  if (idErr) {
-    showToast(`Invalid Student ID: ${idErr}`, true);
-    studentIdInput.focus();
-    return;
-  }
+  const sid = state.studentId;
   _pendingBookId = bookId;
   modalTitle.textContent    = available ? "Reserve this book" : "Join the waitlist";
   modalSubtitle.textContent = `"${title}" by ${author}`;
@@ -635,50 +627,40 @@ toggleExplainBtn.addEventListener("click", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Firebase Auth integration
-// Login overlay is controlled by auth.js (ES module), but we also expose
-// helpers that auth.js calls via window.
+// Auth integration (auth.js calls these via window)
 // ─────────────────────────────────────────────────────────────────────────────
-const loginNavBtn  = $("loginNavBtn");
 const logoutNavBtn = $("logoutNavBtn");
-const loginOverlay = $("loginOverlay");
 
-loginNavBtn.addEventListener("click",  () => loginOverlay.classList.remove("hidden"));
 logoutNavBtn.addEventListener("click", () => {
   if (window._firebaseSignOut) window._firebaseSignOut();
 });
 
-/** Called by auth.js when a user signs in */
 window._onAuthSignIn = (user) => {
-  loginOverlay.classList.add("hidden");
-  loginNavBtn.classList.add("hidden");
-  logoutNavBtn.classList.remove("hidden");
-  // Pre-fill student ID from email prefix when not already set
-  if (studentIdInput.value === "s001") {
-    const prefix = (user.email || "").split("@")[0].replace(/[^A-Za-z0-9_\-]/g, "").slice(0, 20);
-    if (prefix.length >= 2) studentIdInput.value = prefix;
-  }
-  state.studentId = studentIdInput.value.trim();
+  const sid = sessionStorage.getItem("studentId") || user.displayName || "student";
+  state.studentId = sid;
+  studentIdInput.value = sid;
+  // Load homepage books after sign-in
+  loadHomeBooks("all");
 };
 
-/** Exposed for auth.js — lets it read the current student ID input value */
-window._getStudentId = () => studentIdInput.value.trim();
-
-/** Called by auth.js when a user signs out */
-window._onAuthSignOut = () => {
-  loginNavBtn.classList.remove("hidden");
-  logoutNavBtn.classList.add("hidden");
-};
+window._getStudentId = () => state.studentId;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
+// Initial load — if auth.js doesn't fire _onAuthSignIn before DOMContentLoaded
+// (demo mode sets it synchronously via sessionStorage check), load books now.
+if (sessionStorage.getItem("studentId")) {
+  loadHomeBooks("all");
+}
+
 function hideResults() {
   nluInsights.classList.add("hidden");
   aiMessage.classList.add("hidden");
   resultsSection.classList.add("hidden");
   emptyState.classList.add("hidden");
   loadingState.classList.add("hidden");
+  homeBooksSection.classList.remove("hidden");
 }
 
 function setLoading(on) {
@@ -703,4 +685,154 @@ function esc(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+// =============================================================================
+// REVIEWS  (Watson NLU sentiment analysis)
+// =============================================================================
+
+let _currentReviewBookId   = null;
+let _currentReviewBookTitle = "";
+
+/**
+ * Switch to the reviews panel and load existing reviews for a book.
+ * Called when user clicks the "Reviews" button on a book card.
+ */
+function openReviewsPanel(bookId, bookTitle) {
+  _currentReviewBookId    = bookId;
+  _currentReviewBookTitle = bookTitle;
+  $("reviewsPanelTitle").textContent = `Reviews: ${bookTitle}`;
+  $("reviewsPanelSub").textContent   = "Watson NLU sentiment analysis of reader reviews";
+  $("reviewTextarea").value          = "";
+  $("reviewFormError").classList.add("hidden");
+  $("reviewFormCard").classList.remove("hidden");
+  switchPanel("reviews");
+  _loadReviews(bookId);
+}
+
+async function _loadReviews(bookId) {
+  const list = $("reviewsList");
+  list.innerHTML = `<p style="color:var(--color-ash);font-size:13px">Loading reviews…</p>`;
+  try {
+    const res  = await fetch(`/api/reviews/${bookId}`);
+    const data = await res.json();
+    _renderReviews(data.reviews || []);
+  } catch {
+    list.innerHTML = `<p style="color:var(--color-error);font-size:13px">Could not load reviews.</p>`;
+  }
+}
+
+function _renderReviews(reviews) {
+  const list = $("reviewsList");
+  if (!reviews.length) {
+    list.innerHTML = `
+      <div class="state-card">
+        <p class="state-card__title">No reviews yet</p>
+        <p class="state-card__sub">Be the first to review this book</p>
+      </div>`;
+    return;
+  }
+  list.innerHTML = reviews.map((r) => {
+    const cls   = `sentiment-pill sentiment-pill--${r.sentiment_label || "neutral"}`;
+    const score = typeof r.sentiment_score === "number"
+      ? ` (${r.sentiment_score >= 0 ? "+" : ""}${r.sentiment_score.toFixed(2)})`
+      : "";
+    const date  = r.created_at
+      ? new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "";
+    return `
+      <div class="review-card">
+        <div class="review-card__header">
+          <span class="review-card__student">${esc(r.student_id)}</span>
+          <span class="${cls}">${esc(r.sentiment_label || "neutral")}${esc(score)}</span>
+          <span class="review-card__date">${esc(date)}</span>
+        </div>
+        <p class="review-card__body">${esc(r.review_text)}</p>
+      </div>`;
+  }).join("");
+}
+
+$("submitReviewBtn").addEventListener("click", async () => {
+  const text = $("reviewTextarea").value.trim();
+  const errEl = $("reviewFormError");
+  if (!text) {
+    errEl.textContent = "Please write something before submitting.";
+    errEl.classList.remove("hidden");
+    return;
+  }
+  errEl.classList.add("hidden");
+  $("submitReviewBtn").disabled     = true;
+  $("submitReviewBtn").textContent  = "Analysing…";
+  try {
+    const res  = await fetch("/api/reviews", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        student_id: state.studentId,
+        book_id:    _currentReviewBookId,
+        review:     text,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); return; }
+    const label = (data.sentiment && data.sentiment.label) || "neutral";
+    showToast(`Review saved! Sentiment: ${label}`);
+    $("reviewTextarea").value = "";
+    _loadReviews(_currentReviewBookId);
+  } catch {
+    showToast("Could not save review.", true);
+  } finally {
+    $("submitReviewBtn").disabled    = false;
+    $("submitReviewBtn").textContent = "Submit & Analyse Sentiment";
+  }
+});
+
+
+// =============================================================================
+// RECOMMENDATIONS  (WatsonX AI personalised suggestions)
+// =============================================================================
+
+let _recsLoaded = false;
+
+async function loadRecommendations(force = false) {
+  if (_recsLoaded && !force) return;
+  const aiCard    = $("recsAiCard");
+  const aiText    = $("recsAiText");
+  const histSec   = $("recsHistorySection");
+  const histTitle = $("recsHistoryTitle");
+  const histGrid  = $("recsHistoryGrid");
+  const loading   = $("recsLoading");
+  const empty     = $("recsEmpty");
+
+  aiCard.classList.add("hidden");
+  histSec.classList.add("hidden");
+  empty.classList.add("hidden");
+  loading.classList.remove("hidden");
+
+  try {
+    const res  = await fetch(`/api/recommendations/${encodeURIComponent(state.studentId)}`);
+    const data = await res.json();
+
+    loading.classList.add("hidden");
+
+    if (!data.history || !data.history.length) {
+      empty.classList.remove("hidden");
+      return;
+    }
+
+    // Show reading history mini-grid
+    histTitle.textContent = `Based on ${data.history_count} book${data.history_count !== 1 ? "s" : ""} in your history`;
+    histGrid.innerHTML = data.history.map((b, i) => renderPinCard(b, i)).join("");
+    attachReserveListeners(histGrid);
+    attachTagListeners(histGrid);
+    histSec.classList.remove("hidden");
+
+    // Show AI recommendation text
+    aiText.textContent = data.recommendations || "";
+    aiCard.classList.remove("hidden");
+    _recsLoaded = true;
+  } catch {
+    loading.classList.add("hidden");
+    showToast("Could not load recommendations.", true);
+  }
 }

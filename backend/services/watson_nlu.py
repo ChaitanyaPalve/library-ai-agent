@@ -6,6 +6,8 @@ Analyses a student's free-text query and extracts:
   - entities  (book titles, authors, organisations, concepts)
   - categories (broad subject classification)
 
+Also analyses the sentiment of book reviews.
+
 The results are used downstream to build a MongoDB query that retrieves
 the most relevant books from the library collection.
 """
@@ -18,6 +20,7 @@ from ibm_watson.natural_language_understanding_v1 import (
     EntitiesOptions,
     CategoriesOptions,
     ConceptsOptions,
+    SentimentOptions,
 )
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 
@@ -96,4 +99,27 @@ def analyse_query(text: str) -> dict:
         "categories": categories,
         "concepts": concepts,
         "search_terms": search_terms,
+    }
+
+
+def analyse_sentiment(text: str) -> dict:
+    """
+    Analyse the sentiment of a book review text.
+
+    Returns:
+    {
+        "label":  "positive" | "negative" | "neutral",
+        "score":  float (-1.0 … +1.0)
+    }
+    """
+    nlu = _get_nlu()
+    response = nlu.analyze(
+        text=text,
+        features=Features(sentiment=SentimentOptions()),
+    ).get_result()
+
+    doc_sentiment = response.get("sentiment", {}).get("document", {})
+    return {
+        "label": doc_sentiment.get("label", "neutral"),
+        "score": doc_sentiment.get("score", 0.0),
     }

@@ -17,13 +17,14 @@ import time
 import os
 from flask import Blueprint, request, jsonify
 
-from backend.services.watson_nlu   import analyse_query
-from backend.services.watsonx_ai   import generate_search_response, generate_reservation_message
+from backend.services.watson_nlu   import analyse_query, analyse_sentiment
+from backend.services.watsonx_ai   import generate_search_response, generate_reservation_message, recommend_books
 from backend.services.library_lms  import (
     search_books, check_availability,
     reserve_book, cancel_reservation,
     log_query, get_high_demand_books, get_all_books,
     validate_student_id, upsert_student,
+    add_review, get_reviews, get_reading_history,
 )
 from backend.automation.robo_rules import run_all_rules
 from backend.models.db import get_db, get_client
@@ -321,10 +322,6 @@ def cancel(reservation_id: str):
 
 
 # ---------------------------------------------------------------------------
-# Automation
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
 # Student persistence
 # ---------------------------------------------------------------------------
 
@@ -360,3 +357,90 @@ def automation_alerts():
     db = get_db()
     alerts = list(db.automation_alerts.find({}, {"_id": 0}))
     return jsonify({"alerts": alerts, "total": len(alerts)})
+
+
+# ---------------------------------------------------------------------------
+# Book reviews + sentiment  (Watson NLU)
+# ---------------------------------------------------------------------------
+
+@api.route("/reviews/<book_id>", methods=["GET"])
+def reviews_get(book_id: str):
+    """GET /api/reviews/<book_id>  — fetch all reviews for a book."""
+    reviews = get_reviews(book_id)
+    return jsonify({"reviews": reviews, "total": len(reviews)})
+
+
+@api.route("/reviews", methods=["POST"])
+def reviews_post():
+    """
+    POST /api/reviews
+    Body: { "student_id": "s001", "book_id": "<id>", "review": "Great book!" }
+    Watson NLU analyses sentiment before storing.
+    """
+    body        = request.get_json(force=True)
+    student_id  = body.get("student_id", "anonymous").strip()
+    book_id     = body.get("book_id", "").strip()
+    review_text = body.get("review", "").strip()
+
+    if not book_id:
+        return jsonify({"error": "book_id is required"}), 400
+    if not review_text:
+        return jsonify({"error": "review text is required"}), 400
+
+    # Watson NLU sentiment analysis
+    try:
+        sentiment = analyse_sentiment(review_text)
+    except Exception as exc:
+        sentiment = {"label": "neutral", "score": 0.0, "error": str(exc)[:120]}
+
+    doc = add_review(
+        student_id, book_id, review_text,
+        sentiment["label"], sentiment.get("score", 0.0),
+    )
+    if "error" in doc:
+        return jsonify(doc), 400
+    doc["sentiment"] = sentiment
+    return jsonify(doc), 201
+
+
+# ---------------------------------------------------------------------------
+# WatsonX AI recommendations  (reading history → personalised suggestions)
+# ---------------------------------------------------------------------------
+
+@api.route("/recommendations/<student_id>", methods=["GET"])
+def recommendations(student_id: str):
+    """
+    GET /api/recommendations/<student_id>
+    Returns an AI-generated reading recommendation based on reservation history.
+    """
+    history = get_reading_history(student_id)
+    ai_text = recommend_books(history)
+    return jsonify({
+        "student_id": student_id,
+        "history_count": len(history),
+        "history": history,
+        "recommendations": ai_text,
+    })
+
+
+# ---------------------------------------------------------------------------
+# User profile  (reading history + review stats)
+# ---------------------------------------------------------------------------
+
+@api.route("/profile/<student_id>", methods=["GET"])
+def user_profile(student_id: str):
+    """
+    GET /api/profile/<student_id>
+    Returns the student's reading history and review count from MongoDB.
+    """
+    db      = get_db()
+    history = get_reading_history(student_id, limit=20)
+    review_count = db.reviews.count_documents({"student_id": student_id})
+    student = db.students.find_one({"student_id": student_id}, {"_id": 0}) or {}
+    return jsonify({
+        "student_id": student_id,
+        "student": student,
+        "reading_history": history,
+        "history_count": len(history),
+        "review_count": review_count,
+    })

@@ -31,3 +31,5 @@ services:
         value: "false"
       - key: SCHEDULER_INTERVAL_MINUTES
         value: "30"
+      - key: FIREBASE_CONFIG
+        sync: false             # Set in Render dashboard → Environment

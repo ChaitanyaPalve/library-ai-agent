@@ -59,7 +59,7 @@ def test_watson_nlu():
 
 
 def test_watsonx():
-    print("\n[3] Testing IBM WatsonX AI (Granite) ...")
+    print("\n[3] Testing IBM WatsonX AI (Llama 3.3 70B) ...")
     try:
         from backend.services.watsonx_ai import generate_search_response
         reply = generate_search_response("machine learning books", [

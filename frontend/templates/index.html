@@ -4,73 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Library AI – IBM Watson + WatsonX</title>
-  <!-- Performance: DNS prefetch for external origins -->
   <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-  <link rel="dns-prefetch" href="https://www.gstatic.com" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- Preload critical font subset to reduce layout shift -->
-  <link rel="preload" as="font" type="font/woff2" crossorigin
-        href="https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
 
-  <!-- ═══════════════════  LOGIN OVERLAY  ═══════════════════ -->
-  <div id="loginOverlay" class="login-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-    <div class="login-card">
-      <!-- Brand -->
-      <div class="login-brand">
-        <svg width="40" height="40" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <rect width="32" height="32" rx="8" fill="#1a56db"/>
-          <rect x="8" y="7" width="11" height="18" rx="2" fill="#fff"/>
-          <rect x="10" y="7" width="9" height="18" rx="1.5" fill="#dbeafe"/>
-          <path d="M10 11h5M10 14h5M10 17h3" stroke="#1a56db" stroke-width="1.2" stroke-linecap="round"/>
-          <rect x="18" y="9" width="6" height="16" rx="1.5" fill="#fff" opacity=".85"/>
-        </svg>
-        <span class="login-brand__name">Library <span style="color:var(--color-primary)">AI</span></span>
-      </div>
-
-      <h1 class="login-title" id="loginTitle">Sign in to your account</h1>
-      <p class="login-sub">Enter your student credentials to continue</p>
-
-      <div id="loginError" class="login-error hidden"></div>
-
-      <form id="loginForm" class="login-form" novalidate>
-        <label class="field-label" for="loginEmail">Email</label>
-        <input id="loginEmail" class="field-input" type="email" placeholder="student@university.edu" autocomplete="email" required />
-
-        <label class="field-label" for="loginPassword">Password</label>
-        <input id="loginPassword" class="field-input" type="password" placeholder="••••••••" autocomplete="current-password" required />
-
-        <button type="submit" class="btn-primary btn-primary--full" id="loginBtn">Sign in</button>
-      </form>
-
-      <div class="login-divider"><span>or</span></div>
-
-      <button class="btn-google" id="googleSignInBtn">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-          <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-          <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-        </svg>
-        Continue with Google
-      </button>
-
-      <p class="login-footer">
-        Secured by <strong>Firebase Authentication</strong> · Student IDs stored in MongoDB
-      </p>
-    </div>
-  </div>
-
   <!-- ═══════════════════════  PRIMARY NAV  ═══════════════════════ -->
   <header class="primary-nav" id="primaryNav">
     <div class="nav__inner">
 
-      <!-- Brand wordmark -->
-      <a class="nav__brand" href="#" aria-label="Library AI home" id="homeBtn">
+      <!-- Brand — clicking takes you to home panel -->
+      <a class="nav__brand" href="/" aria-label="Library AI home" id="homeBtn">
         <svg class="nav__logo" width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <rect width="32" height="32" rx="8" fill="#1a56db"/>
           <rect x="8" y="7" width="11" height="18" rx="2" fill="#fff"/>
@@ -90,26 +37,20 @@
             <path d="M13.5 13.5L18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
           <input id="queryInput" class="search-bar__input" type="search"
-                 placeholder="Search for books, topics, authors…"
+                 placeholder="Search books, topics, authors…"
                  autocomplete="off" spellcheck="false" />
         </div>
       </div>
 
-      <!-- Hamburger -->
+      <!-- Hamburger (mobile) -->
       <button class="nav__hamburger" id="menuToggle" aria-label="Open menu" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
 
       <!-- Right cluster -->
       <div class="nav__actions">
-        <div class="student-id-wrap">
-          <input id="studentId" class="nav__student-input" type="text"
-                 placeholder="Student ID" value="s001" title="Your student ID"
-                 maxlength="20" />
-          <span id="studentIdError" class="student-id-error hidden" aria-live="polite"></span>
-        </div>
-        <button class="btn-tertiary" data-panel="books" id="navBooksBtn">All Books</button>
         <button class="btn-tertiary" data-panel="reservations" id="navResBtn">My Holds</button>
+        <button class="btn-tertiary" data-panel="recommendations" id="navRecsBtn">For You</button>
         <button class="btn-tertiary" data-panel="dashboard" id="navDashBtn">Dashboard</button>
         <!-- Theme toggle -->
         <button class="btn-icon-circular" id="themeToggle" aria-label="Toggle dark/light theme" title="Toggle theme">
@@ -129,8 +70,7 @@
           Search
         </button>
         <!-- Auth -->
-        <button class="btn-tertiary" id="loginNavBtn">Sign in</button>
-        <button class="btn-tertiary hidden" id="logoutNavBtn">Sign out</button>
+        <button class="btn-tertiary" id="logoutNavBtn">Sign out</button>
       </div>
 
     </div>
@@ -139,35 +79,16 @@
   <!-- ═══════════════════════  MAIN  ═══════════════════════ -->
   <main class="main">
 
-    <!-- ── SEARCH / HOME PANEL ── -->
+    <!-- ── HOME / SEARCH PANEL ── -->
     <section id="panel-search" class="panel active">
 
       <!-- Hero -->
       <div class="hero">
         <h1 class="hero__headline">Find the right book,<br>right now</h1>
-        <p class="hero__sub">Ask anything — IBM Watson NLU analyses your query and surfaces the most relevant books from the library</p>
-
-        <!-- Filter chip strip (subject shortcuts) -->
-        <div class="filter-strip" id="filterStrip" role="list" aria-label="Subject filters">
-          <button class="filter-chip filter-chip--active" data-filter="all" role="listitem">All</button>
-          <button class="filter-chip" data-filter="fiction" role="listitem">Fiction</button>
-          <button class="filter-chip" data-filter="horror" role="listitem">Horror</button>
-          <button class="filter-chip" data-filter="romance" role="listitem">Romance</button>
-          <button class="filter-chip" data-filter="graphic novel" role="listitem">Graphic Novel</button>
-          <button class="filter-chip" data-filter="biography" role="listitem">Biography</button>
-          <button class="filter-chip" data-filter="machine learning" role="listitem">Machine Learning</button>
-          <button class="filter-chip" data-filter="data science" role="listitem">Data Science</button>
-          <button class="filter-chip" data-filter="algorithms" role="listitem">Algorithms</button>
-          <button class="filter-chip" data-filter="python" role="listitem">Python</button>
-          <button class="filter-chip" data-filter="NLP" role="listitem">NLP</button>
-          <button class="filter-chip" data-filter="database" role="listitem">Databases</button>
-          <button class="filter-chip" data-filter="networking" role="listitem">Networking</button>
-          <button class="filter-chip" data-filter="mathematics" role="listitem">Mathematics</button>
-          <button class="filter-chip" data-filter="cloud computing" role="listitem">Cloud</button>
-        </div>
+        <p class="hero__sub">Ask anything — IBM Watson NLU analyses your query and surfaces the most relevant books</p>
       </div>
 
-      <!-- NLU term pills (shown after search) -->
+      <!-- NLU term pills -->
       <div id="nluInsights" class="nlu-row hidden" role="status" aria-live="polite"></div>
 
       <!-- Watson AI message card -->
@@ -180,10 +101,39 @@
         <p id="aiMessageText" class="ai-card__text"></p>
       </div>
 
-      <!-- Results count + grid -->
+      <!-- Results count + grid (search results) -->
       <div id="resultsSection" class="hidden">
         <p id="resultsTitle" class="results-count"></p>
         <div id="booksGrid" class="pin-grid" role="list"></div>
+      </div>
+
+      <!-- Genre strip — single unified row for browsing & filtering -->
+      <div class="filter-strip" id="homeGenreStrip" role="list" aria-label="Browse by genre" style="margin-bottom:var(--space-xl)">
+        <button class="filter-chip filter-chip--active" data-genre="all" role="listitem">All</button>
+        <button class="filter-chip" data-genre="fiction" role="listitem">Fiction</button>
+        <button class="filter-chip" data-genre="horror" role="listitem">Horror</button>
+        <button class="filter-chip" data-genre="romance" role="listitem">Romance</button>
+        <button class="filter-chip" data-genre="graphic novel" role="listitem">Graphic Novel</button>
+        <button class="filter-chip" data-genre="biography" role="listitem">Biography</button>
+        <button class="filter-chip" data-genre="machine learning" role="listitem">Machine Learning</button>
+        <button class="filter-chip" data-genre="data science" role="listitem">Data Science</button>
+        <button class="filter-chip" data-genre="algorithms" role="listitem">Algorithms</button>
+        <button class="filter-chip" data-genre="python" role="listitem">Python</button>
+        <button class="filter-chip" data-genre="NLP" role="listitem">NLP</button>
+        <button class="filter-chip" data-genre="database" role="listitem">Databases</button>
+        <button class="filter-chip" data-genre="networking" role="listitem">Networking</button>
+        <button class="filter-chip" data-genre="mathematics" role="listitem">Mathematics</button>
+        <button class="filter-chip" data-genre="cloud computing" role="listitem">Cloud</button>
+      </div>
+
+      <!-- All books displayed on homepage -->
+      <div id="homeBooksSection">
+        <p id="homeBooksCount" class="results-count"></p>
+        <div id="homeBooksLoading" class="state-card hidden" aria-busy="true">
+          <div class="lib-spinner" aria-hidden="true"><div class="lib-spinner__ring"></div></div>
+          <p class="state-card__sub">Loading catalogue…</p>
+        </div>
+        <div id="homeBooksGrid" class="pin-grid" role="list"></div>
       </div>
 
       <!-- Empty state -->
@@ -212,39 +162,6 @@
 
     </section>
 
-    <!-- ── ALL BOOKS PANEL ── -->
-    <section id="panel-books" class="panel">
-      <div class="panel-header">
-        <h2 class="panel-header__title">All Books</h2>
-        <p class="panel-header__sub">Browse the complete library catalogue</p>
-      </div>
-
-      <!-- Subject filter strip for All Books panel -->
-      <div class="filter-strip" id="booksFilterStrip" role="list" aria-label="Browse by subject" style="margin-bottom:var(--space-xl)">
-        <button class="filter-chip filter-chip--active" data-subject="all" role="listitem">All</button>
-        <button class="filter-chip" data-subject="fiction" role="listitem">Fiction</button>
-        <button class="filter-chip" data-subject="horror" role="listitem">Horror</button>
-        <button class="filter-chip" data-subject="romance" role="listitem">Romance</button>
-        <button class="filter-chip" data-subject="graphic novel" role="listitem">Graphic Novel</button>
-        <button class="filter-chip" data-subject="biography" role="listitem">Biography</button>
-        <button class="filter-chip" data-subject="machine learning" role="listitem">Machine Learning</button>
-        <button class="filter-chip" data-subject="data science" role="listitem">Data Science</button>
-        <button class="filter-chip" data-subject="algorithms" role="listitem">Algorithms</button>
-        <button class="filter-chip" data-subject="python" role="listitem">Python</button>
-        <button class="filter-chip" data-subject="mathematics" role="listitem">Mathematics</button>
-        <button class="filter-chip" data-subject="networking" role="listitem">Networking</button>
-        <button class="filter-chip" data-subject="database" role="listitem">Databases</button>
-        <button class="filter-chip" data-subject="cloud computing" role="listitem">Cloud</button>
-      </div>
-
-      <div id="allBooksLoading" class="state-card hidden" aria-busy="true">
-        <div class="lib-spinner" aria-hidden="true"><div class="lib-spinner__ring"></div></div>
-        <p class="state-card__sub">Loading catalogue…</p>
-      </div>
-      <p id="allBooksCount" class="results-count hidden"></p>
-      <div id="allBooksGrid" class="pin-grid" role="list"></div>
-    </section>
-
     <!-- ── RESERVATIONS PANEL ── -->
     <section id="panel-reservations" class="panel">
       <div class="panel-header">
@@ -261,7 +178,6 @@
         <p class="panel-header__sub">Service health, IBM Robo automation alerts, and high-demand analytics</p>
       </div>
 
-      <!-- ── ORCHESTRATION STATUS ── -->
       <div class="orch-header">
         <span class="orch-header__title">System Status</span>
         <button id="refreshStatusBtn" class="btn-icon-sm" aria-label="Refresh status">
@@ -275,7 +191,6 @@
         <p style="color:var(--color-ash);font-size:13px">Loading service status…</p>
       </div>
 
-      <!-- ── AI PIPELINE EXPLAINER ── -->
       <div class="explain-section">
         <div class="explain-header">
           <div>
@@ -299,6 +214,60 @@
           <div id="automationAlerts" class="alert-list"></div>
           <button id="runRoboBtn" class="btn-secondary" style="margin-top:16px">Run Robo Rules</button>
         </div>
+      </div>
+    </section>
+
+    <!-- ── REVIEWS PANEL ── -->
+    <section id="panel-reviews" class="panel">
+      <div class="panel-header">
+        <h2 class="panel-header__title" id="reviewsPanelTitle">Reviews</h2>
+        <p class="panel-header__sub" id="reviewsPanelSub">Watson NLU sentiment analysis of reader reviews</p>
+      </div>
+
+      <!-- Submit review form -->
+      <div class="review-form-card" id="reviewFormCard">
+        <h3 class="review-form-card__title">Write a Review</h3>
+        <textarea id="reviewTextarea" class="review-form-card__textarea"
+                  placeholder="Share your thoughts about this book…" rows="4"></textarea>
+        <div class="review-form-card__footer">
+          <button class="btn-primary" id="submitReviewBtn">Submit &amp; Analyse Sentiment</button>
+          <span id="reviewFormError" class="review-form-card__error hidden"></span>
+        </div>
+      </div>
+
+      <!-- Review list -->
+      <div id="reviewsList" class="reviews-list"></div>
+    </section>
+
+    <!-- ── RECOMMENDATIONS PANEL ── -->
+    <section id="panel-recommendations" class="panel">
+      <div class="panel-header">
+        <h2 class="panel-header__title">For You</h2>
+        <p class="panel-header__sub">WatsonX AI recommendations based on your reading history</p>
+      </div>
+
+      <div id="recsAiCard" class="ai-card hidden">
+        <svg class="ai-card__icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <circle cx="10" cy="10" r="9" fill="#1a56db" opacity=".10"/>
+          <path d="M10 4v3M10 13v3M4 10h3M13 10h3" stroke="#1a56db" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="10" cy="10" r="2" fill="#1a56db"/>
+        </svg>
+        <pre id="recsAiText" class="ai-card__text recs-text"></pre>
+      </div>
+
+      <div id="recsHistorySection" class="hidden" style="margin-top:var(--space-xl)">
+        <p class="results-count" id="recsHistoryTitle"></p>
+        <div id="recsHistoryGrid" class="pin-grid" role="list"></div>
+      </div>
+
+      <div id="recsLoading" class="state-card hidden" aria-busy="true">
+        <div class="lib-spinner" aria-hidden="true"><div class="lib-spinner__ring"></div></div>
+        <p class="state-card__sub">WatsonX AI is personalising your recommendations…</p>
+      </div>
+
+      <div id="recsEmpty" class="state-card hidden">
+        <p class="state-card__title">No history yet</p>
+        <p class="state-card__sub">Reserve a few books and come back for personalised recommendations</p>
       </div>
     </section>
 
@@ -337,26 +306,25 @@
     <ul class="drawer__list">
       <li><button class="drawer__item drawer__item--home" data-panel="search">🏠 Home</button></li>
       <li class="drawer__divider"></li>
-      <li class="drawer__section-label">Browse</li>
-      <li><button class="drawer__item" data-panel="books">All Books</button></li>
-      <li class="drawer__divider"></li>
       <li class="drawer__section-label">Browse by Genre</li>
-      <li><button class="drawer__item" data-filter="fiction">Fiction</button></li>
-      <li><button class="drawer__item" data-filter="horror">Horror</button></li>
-      <li><button class="drawer__item" data-filter="romance">Romance</button></li>
-      <li><button class="drawer__item" data-filter="graphic novel">Graphic Novel</button></li>
-      <li><button class="drawer__item" data-filter="biography">Biography</button></li>
-      <li><button class="drawer__item" data-filter="machine learning">Machine Learning</button></li>
-      <li><button class="drawer__item" data-filter="data science">Data Science</button></li>
-      <li><button class="drawer__item" data-filter="algorithms">Algorithms</button></li>
-      <li><button class="drawer__item" data-filter="python">Python</button></li>
-      <li><button class="drawer__item" data-filter="NLP">NLP</button></li>
-      <li><button class="drawer__item" data-filter="database">Databases</button></li>
-      <li><button class="drawer__item" data-filter="networking">Networking</button></li>
-      <li><button class="drawer__item" data-filter="mathematics">Mathematics</button></li>
-      <li><button class="drawer__item" data-filter="cloud computing">Cloud</button></li>
+      <li><button class="drawer__item" data-genre="all">All Books</button></li>
+      <li><button class="drawer__item" data-genre="fiction">Fiction</button></li>
+      <li><button class="drawer__item" data-genre="horror">Horror</button></li>
+      <li><button class="drawer__item" data-genre="romance">Romance</button></li>
+      <li><button class="drawer__item" data-genre="graphic novel">Graphic Novel</button></li>
+      <li><button class="drawer__item" data-genre="biography">Biography</button></li>
+      <li><button class="drawer__item" data-genre="machine learning">Machine Learning</button></li>
+      <li><button class="drawer__item" data-genre="data science">Data Science</button></li>
+      <li><button class="drawer__item" data-genre="algorithms">Algorithms</button></li>
+      <li><button class="drawer__item" data-genre="python">Python</button></li>
+      <li><button class="drawer__item" data-genre="NLP">NLP</button></li>
+      <li><button class="drawer__item" data-genre="database">Databases</button></li>
+      <li><button class="drawer__item" data-genre="networking">Networking</button></li>
+      <li><button class="drawer__item" data-genre="mathematics">Mathematics</button></li>
+      <li><button class="drawer__item" data-genre="cloud computing">Cloud</button></li>
       <li class="drawer__divider"></li>
       <li><button class="drawer__item" data-panel="reservations">My Holds</button></li>
+      <li><button class="drawer__item" data-panel="recommendations">For You</button></li>
       <li><button class="drawer__item" data-panel="dashboard">Dashboard</button></li>
     </ul>
   </nav>
@@ -364,7 +332,11 @@
   <!-- Toast -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <!-- Firebase Auth SDK (loaded async — non-blocking) -->
+  <!-- Hidden student id field (kept for app.js compat) -->
+  <input id="studentId" type="hidden" value="1234" />
+  <span id="studentIdError" class="hidden"></span>
+
+  {{ firebase_config_script | safe }}
   <script type="module" src="/js/auth.js" defer></script>
   <script src="/js/app.js" defer></script>
 </body>

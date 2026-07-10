@@ -195,11 +195,7 @@ def cancel_reservation(reservation_id: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Query logging
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# Student persistence
+# Query logging / Student persistence
 # ---------------------------------------------------------------------------
 
 def upsert_student(student_id: str, firebase_uid: str, email: str | None = None) -> dict:
@@ -233,6 +229,80 @@ def log_query(student_id: str, raw_text: str, matched_book_ids: list) -> str:
     doc = make_query(student_id, raw_text, matched_book_ids)
     result = db.queries.insert_one(doc)
     return str(result.inserted_id)
+
+
+# ---------------------------------------------------------------------------
+# Book reviews
+# ---------------------------------------------------------------------------
+
+def add_review(student_id: str, book_id: str, review_text: str,
+               sentiment_label: str, sentiment_score: float) -> dict:
+    """Insert a review and return the stored doc (with stringified _id)."""
+    db = get_db()
+    from bson import ObjectId as _ObjId
+    try:
+        obj_id = _ObjId(book_id)
+    except Exception:
+        return {"error": "Invalid book ID"}
+    doc = {
+        "student_id": student_id,
+        "book_id": obj_id,
+        "book_id_str": book_id,
+        "review_text": review_text,
+        "sentiment_label": sentiment_label,
+        "sentiment_score": sentiment_score,
+        "created_at": datetime.utcnow(),
+    }
+    result = db.reviews.insert_one(doc)
+    doc["_id"] = str(result.inserted_id)
+    doc["book_id"] = book_id
+    return doc
+
+
+def get_reviews(book_id: str) -> list[dict]:
+    """Return all reviews for a book, newest first."""
+    db = get_db()
+    from bson import ObjectId as _ObjId
+    try:
+        obj_id = _ObjId(book_id)
+    except Exception:
+        return []
+    cursor = db.reviews.find({"book_id": obj_id}).sort("created_at", -1)
+    results = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        doc["book_id"] = book_id
+        results.append(doc)
+    return results
+
+
+# ---------------------------------------------------------------------------
+# User profile / reading history
+# ---------------------------------------------------------------------------
+
+def get_reading_history(student_id: str, limit: int = 20) -> list[dict]:
+    """
+    Return titles the student has reserved (active + completed), used as
+    reading history for the WatsonX recommendation engine.
+    """
+    db = get_db()
+    cursor = db.reservations.find(
+        {"student_id": student_id, "status": {"$in": ["active", "completed"]}},
+    ).sort("created_at", -1).limit(limit)
+
+    book_ids = []
+    for r in cursor:
+        bid = r.get("book_id")
+        if bid and bid not in book_ids:
+            book_ids.append(bid)
+
+    books = []
+    for bid in book_ids:
+        b = db.books.find_one({"_id": bid}, {"title": 1, "author": 1, "subject_tags": 1})
+        if b:
+            b["_id"] = str(b["_id"])
+            books.append(b)
+    return books
 
 
 # ---------------------------------------------------------------------------

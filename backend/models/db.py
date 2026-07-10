@@ -4,6 +4,7 @@ Collections: books, students, queries, reservations
 """
 
 import os
+import logging
 from datetime import datetime
 
 import certifi
@@ -70,7 +71,11 @@ def ensure_indexes():
     # Students
     db.students.create_index([("student_id", ASCENDING)], unique=True)
     db.students.create_index([("firebase_uid", ASCENDING)])
-    print("[db] Indexes ensured.")
+    # Reviews
+    db.reviews.create_index([("book_id", ASCENDING)])
+    db.reviews.create_index([("student_id", ASCENDING)])
+    db.reviews.create_index([("created_at", DESCENDING)])
+    logging.getLogger(__name__).info("[db] Indexes ensured.")
 
 
 # ---------------------------------------------------------------------------

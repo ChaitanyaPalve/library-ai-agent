@@ -86,6 +86,17 @@ If the status is "waitlisted", include an estimated wait note.
 
 Message:"""
 
+_RECOMMENDATION_PROMPT = """You are a personalised university library assistant.
+A student has read or reserved the following books:
+{history_list}
+
+Based on their reading history, recommend 3–5 books they should read next.
+For each recommendation give: title, author, and a one-sentence reason why it fits.
+Format each as:
+  • "<title>" by <author> — <reason>
+
+Recommendations:"""
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -105,6 +116,23 @@ def generate_search_response(query: str, books: list[dict]) -> str:
         )
         prompt = _SEARCH_SUMMARY_PROMPT.format(query=query, book_list=book_lines)
 
+    result = model.generate_text(prompt=prompt)
+    return result.strip() if isinstance(result, str) else result
+
+
+def recommend_books(reading_history: list[dict]) -> str:
+    """
+    Given a list of book dicts (each with at least 'title' and 'author'),
+    return an AI-generated reading recommendation paragraph.
+    """
+    model = _get_model()
+    if not reading_history:
+        return "No reading history found — search for and reserve a few books first!"
+    history_lines = "\n".join(
+        f'- "{b.get("title", "Unknown")}" by {b.get("author", "Unknown")}'
+        for b in reading_history[:10]
+    )
+    prompt = _RECOMMENDATION_PROMPT.format(history_list=history_lines)
     result = model.generate_text(prompt=prompt)
     return result.strip() if isinstance(result, str) else result
 

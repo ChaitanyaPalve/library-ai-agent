@@ -11,7 +11,8 @@ Startup sequence:
 
 import os
 import logging
-from flask import Flask, send_from_directory
+import json
+from flask import Flask, send_from_directory, render_template
 from dotenv import load_dotenv
 
 load_dotenv()  # Read .env before anything else
@@ -53,16 +54,31 @@ def create_app() -> Flask:
         scheduler.start()
         logger.info("[Scheduler] Robo rules scheduled every %d minutes.", interval_minutes)
 
-    # ── Serve frontend SPA ───────────────────────────────────────────────────
+    # ── Serve frontend ───────────────────────────────────────────────────────
+    templates_dir = os.path.join(app.root_path, "frontend", "templates")
+    static_dir    = os.path.join(app.root_path, "frontend", "static")
+
+    # Build a <script> that sets window.FIREBASE_CONFIG once from env
+    _raw = os.getenv("FIREBASE_CONFIG", "")
+    try:
+        _cfg = json.loads(_raw) if _raw else {}
+    except Exception:
+        _cfg = {}
+    _firebase_script = (
+        f"<script>window.FIREBASE_CONFIG={json.dumps(_cfg)};</script>"
+        if _cfg else ""
+    )
+
+    @app.route("/login")
+    def serve_login():
+        return render_template("login.html", firebase_config_script=_firebase_script)
+
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
     def serve_frontend(path):
-        static_dir = os.path.join(app.root_path, "frontend", "static")
         if path and os.path.exists(os.path.join(static_dir, path)):
             return send_from_directory(static_dir, path)
-        return send_from_directory(
-            os.path.join(app.root_path, "frontend", "templates"), "index.html"
-        )
+        return render_template("index.html", firebase_config_script=_firebase_script)
 
     return app
 
