@@ -22,7 +22,8 @@ from backend.services.watsonx_ai   import generate_search_response, generate_res
 from backend.services.library_lms  import (
     search_books, check_availability,
     reserve_book, cancel_reservation,
-    log_query, get_high_demand_books,
+    log_query, get_high_demand_books, get_all_books,
+    validate_student_id, upsert_student,
 )
 from backend.automation.robo_rules import run_all_rules
 from backend.models.db import get_db, get_client
@@ -251,6 +252,23 @@ def book_detail(book_id: str):
 
 
 # ---------------------------------------------------------------------------
+# All books catalogue listing
+# ---------------------------------------------------------------------------
+
+@api.route("/books", methods=["GET"])
+def all_books():
+    """
+    GET /api/books?subject=fiction&skip=0&limit=50
+    Returns all books, optionally filtered by subject tag.
+    """
+    subject = request.args.get("subject", None)
+    skip    = int(request.args.get("skip",  0))
+    limit   = min(int(request.args.get("limit", 50)), 100)
+    books   = get_all_books(skip=skip, limit=limit, subject=subject)
+    return jsonify({"books": books, "total": len(books), "skip": skip, "limit": limit})
+
+
+# ---------------------------------------------------------------------------
 # High-demand books listing
 # ---------------------------------------------------------------------------
 
@@ -274,8 +292,12 @@ def reserve():
     student_id = body.get("student_id", "").strip()
     book_id    = body.get("book_id", "").strip()
 
-    if not student_id or not book_id:
-        return jsonify({"error": "student_id and book_id are required"}), 400
+    if not book_id:
+        return jsonify({"error": "book_id is required"}), 400
+
+    id_error = validate_student_id(student_id)
+    if id_error:
+        return jsonify({"error": id_error}), 400
 
     reservation = reserve_book(student_id, book_id)
     if "error" in reservation:
@@ -301,6 +323,31 @@ def cancel(reservation_id: str):
 # ---------------------------------------------------------------------------
 # Automation
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Student persistence
+# ---------------------------------------------------------------------------
+
+@api.route("/students", methods=["POST"])
+def persist_student():
+    """
+    Body: { "student_id": "s001", "firebase_uid": "abc123", "email": "student@uni.edu" }
+    Upserts the student document in MongoDB.  Called from auth.js on sign-in.
+    """
+    body       = request.get_json(force=True)
+    student_id = body.get("student_id", "").strip()
+    firebase_uid = body.get("firebase_uid", "").strip()
+    email      = body.get("email", "").strip() or None
+
+    id_error = validate_student_id(student_id)
+    if id_error:
+        return jsonify({"error": id_error}), 400
+    if not firebase_uid:
+        return jsonify({"error": "firebase_uid is required"}), 400
+
+    doc = upsert_student(student_id, firebase_uid, email)
+    return jsonify(doc), 200
+
 
 @api.route("/automation/run", methods=["GET"])
 def automation_run():

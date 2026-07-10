@@ -5,9 +5,13 @@
  *   - Sticky nav panel switching + filter chip strip
  *   - Search form (nav search bar) → POST /api/search
  *   - Pin-grid masonry card rendering with colour-block thumbnails
- *   - Reserve / waitlist modal → POST /api/reserve
+ *   - Reserve / waitlist modal → POST /api/reserve  (with duplicate-hold guard)
  *   - Cancel reservation → DELETE /api/reserve/:id
+ *   - All Books panel → GET /api/books
  *   - Dashboard: high-demand + IBM Robo automation alerts
+ *   - Light / dark theme toggle (persisted to localStorage)
+ *   - Firebase Auth integration (login overlay + sign-in/sign-out)
+ *   - Student ID live validation
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,6 +21,7 @@ const state = {
   studentId: "s001",
   reservations: [],   // { id, bookId, bookTitle, bookAuthor, status, message }
   activeFilter: "all",
+  allBooksSubject: "all",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,33 +29,88 @@ const state = {
 // ─────────────────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 
-const searchBtn        = $("searchBtn");
-const queryInput       = $("queryInput");
-const studentIdInput   = $("studentId");
-const nluInsights      = $("nluInsights");
-const aiMessage        = $("aiMessage");
-const aiMessageText    = $("aiMessageText");
-const resultsSection   = $("resultsSection");
-const booksGrid        = $("booksGrid");
-const resultsTitle     = $("resultsTitle");
-const emptyState       = $("emptyState");
-const loadingState     = $("loadingState");
-const reserveModal     = $("reserveModal");
-const modalTitle       = $("modalTitle");
-const modalSubtitle    = $("modalSubtitle");
-const modalBody        = $("modalBody");
-const modalConfirm     = $("modalConfirm");
-const modalCancel      = $("modalCancel");
-const modalClose       = $("modalClose");
-const reservationsList = $("reservationsList");
-const highDemandList   = $("highDemandList");
-const automationAlerts = $("automationAlerts");
-const runRoboBtn       = $("runRoboBtn");
-const toastEl          = $("toast");
+const searchBtn          = $("searchBtn");
+const queryInput         = $("queryInput");
+const studentIdInput     = $("studentId");
+const studentIdError     = $("studentIdError");
+const nluInsights        = $("nluInsights");
+const aiMessage          = $("aiMessage");
+const aiMessageText      = $("aiMessageText");
+const resultsSection     = $("resultsSection");
+const booksGrid          = $("booksGrid");
+const resultsTitle       = $("resultsTitle");
+const emptyState         = $("emptyState");
+const loadingState       = $("loadingState");
+const reserveModal       = $("reserveModal");
+const modalTitle         = $("modalTitle");
+const modalSubtitle      = $("modalSubtitle");
+const modalBody          = $("modalBody");
+const modalConfirm       = $("modalConfirm");
+const modalCancel        = $("modalCancel");
+const modalClose         = $("modalClose");
+const reservationsList   = $("reservationsList");
+const highDemandList     = $("highDemandList");
+const automationAlerts   = $("automationAlerts");
+const runRoboBtn         = $("runRoboBtn");
+const toastEl            = $("toast");
+const allBooksGrid       = $("allBooksGrid");
+const allBooksCount      = $("allBooksCount");
+const allBooksLoading    = $("allBooksLoading");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Theme toggle  (persisted to localStorage)
+// ─────────────────────────────────────────────────────────────────────────────
+const htmlEl         = document.documentElement;
+const themeToggle    = $("themeToggle");
+const themeIconLight = $("themeIconLight");
+const themeIconDark  = $("themeIconDark");
+
+function applyTheme(theme) {
+  htmlEl.setAttribute("data-theme", theme);
+  if (theme === "dark") {
+    themeIconLight.classList.add("hidden");
+    themeIconDark.classList.remove("hidden");
+  } else {
+    themeIconLight.classList.remove("hidden");
+    themeIconDark.classList.add("hidden");
+  }
+}
+
+// Restore from storage or default to light
+applyTheme(localStorage.getItem("theme") || "light");
+
+themeToggle.addEventListener("click", () => {
+  const next = htmlEl.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  applyTheme(next);
+  localStorage.setItem("theme", next);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Student ID live validation
+// ─────────────────────────────────────────────────────────────────────────────
+const STUDENT_ID_RE = /^[A-Za-z0-9_\-]{2,20}$/;
+
+function validateStudentIdInput(value) {
+  if (!value) return "Student ID is required";
+  if (value.length < 2 || value.length > 20) return "Must be 2–20 characters";
+  if (!STUDENT_ID_RE.test(value)) return "Letters, digits, hyphens, underscores only";
+  return null;
+}
+
+studentIdInput.addEventListener("input", () => {
+  const err = validateStudentIdInput(studentIdInput.value.trim());
+  if (err) {
+    studentIdError.textContent = err;
+    studentIdError.classList.remove("hidden");
+    studentIdInput.style.borderColor = "var(--color-error)";
+  } else {
+    studentIdError.classList.add("hidden");
+    studentIdInput.style.borderColor = "";
+  }
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Panel navigation
-// "My Holds" and "Dashboard" buttons live in nav__actions
 // ─────────────────────────────────────────────────────────────────────────────
 function switchPanel(panelName) {
   document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
@@ -58,12 +118,12 @@ function switchPanel(panelName) {
   if (target) target.classList.add("active");
   if (panelName === "reservations") renderReservations();
   if (panelName === "dashboard")    loadDashboard();
+  if (panelName === "books")        loadAllBooks();
 }
 
-$("navResBtn").addEventListener("click",  () => switchPanel("reservations"));
-$("navDashBtn").addEventListener("click", () => switchPanel("dashboard"));
-
-// Home button (brand logo)
+$("navResBtn").addEventListener("click",   () => switchPanel("reservations"));
+$("navDashBtn").addEventListener("click",  () => switchPanel("dashboard"));
+$("navBooksBtn").addEventListener("click", () => switchPanel("books"));
 $("homeBtn").addEventListener("click", (e) => { e.preventDefault(); switchPanel("search"); });
 
 // ─── Side Drawer ─────────────────────────────────────────────────────────────
@@ -85,12 +145,9 @@ $("menuToggle").addEventListener("click", openDrawer);
 $("drawerClose").addEventListener("click", closeDrawer);
 drawerScrim.addEventListener("click", closeDrawer);
 
-// Drawer panel links (Home, My Holds, Dashboard)
+// Drawer panel links
 sideDrawer.querySelectorAll(".drawer__item[data-panel]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    switchPanel(btn.dataset.panel);
-    closeDrawer();
-  });
+  btn.addEventListener("click", () => { switchPanel(btn.dataset.panel); closeDrawer(); });
 });
 
 // Drawer genre/filter links
@@ -98,36 +155,26 @@ sideDrawer.querySelectorAll(".drawer__item[data-filter]").forEach((btn) => {
   btn.addEventListener("click", () => {
     const filter = btn.dataset.filter;
     switchPanel("search");
-    // Activate matching filter chip
     document.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("filter-chip--active"));
     const chip = document.querySelector(`.filter-chip[data-filter="${filter}"]`);
     if (chip) chip.classList.add("filter-chip--active");
     state.activeFilter = filter;
-    if (filter === "all") {
-      queryInput.value = "";
-    } else {
-      queryInput.value = filter;
-      doSearch();
-    }
+    queryInput.value = filter === "all" ? "" : filter;
+    if (filter !== "all") doSearch();
     closeDrawer();
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Filter chip strip
+// Filter chip strip (search panel)
 // ─────────────────────────────────────────────────────────────────────────────
-document.querySelectorAll(".filter-chip").forEach((chip) => {
+document.querySelectorAll("#filterStrip .filter-chip").forEach((chip) => {
   chip.addEventListener("click", () => {
-    document.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("filter-chip--active"));
+    document.querySelectorAll("#filterStrip .filter-chip").forEach((c) => c.classList.remove("filter-chip--active"));
     chip.classList.add("filter-chip--active");
     const filter = chip.dataset.filter;
     state.activeFilter = filter;
-
-    // Populate the search bar and run a search
-    if (filter !== "all") {
-      queryInput.value = filter;
-      doSearch();
-    }
+    if (filter !== "all") { queryInput.value = filter; doSearch(); }
   });
 });
 
@@ -139,10 +186,19 @@ queryInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(
 
 async function doSearch() {
   const query = queryInput.value.trim();
-  state.studentId = studentIdInput.value.trim() || "anonymous";
+  const sid   = studentIdInput.value.trim() || "anonymous";
+
+  // Validate student ID before API call
+  const idErr = validateStudentIdInput(sid);
+  if (idErr && sid !== "anonymous") {
+    showToast("Fix your Student ID before searching.", true);
+    studentIdInput.focus();
+    return;
+  }
+  state.studentId = sid;
+
   if (!query) return;
 
-  // Switch to search panel if not there
   switchPanel("search");
   setLoading(true);
   hideResults();
@@ -153,12 +209,10 @@ async function doSearch() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ student_id: state.studentId, query }),
     });
-
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     setLoading(false);
 
-    // ── NLU pills ──────────────────────────────────────────────────────────
     if (data.search_terms && data.search_terms.length) {
       nluInsights.innerHTML =
         '<span class="nlu-label">Watson NLU extracted:</span>' +
@@ -166,18 +220,16 @@ async function doSearch() {
       nluInsights.classList.remove("hidden");
     }
 
-    // ── WatsonX AI message ─────────────────────────────────────────────────
     if (data.ai_message) {
       aiMessageText.textContent = data.ai_message;
       aiMessage.classList.remove("hidden");
     }
 
-    // ── Pin grid ───────────────────────────────────────────────────────────
     if (data.books && data.books.length > 0) {
       resultsTitle.textContent = `${data.total} book${data.total !== 1 ? "s" : ""} found`;
       booksGrid.innerHTML = data.books.map((b, i) => renderPinCard(b, i)).join("");
       resultsSection.classList.remove("hidden");
-      attachReserveListeners();
+      attachReserveListeners(booksGrid);
     } else {
       emptyState.classList.remove("hidden");
     }
@@ -189,12 +241,52 @@ async function doSearch() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// All Books panel
+// ─────────────────────────────────────────────────────────────────────────────
+let _allBooksLoaded = false;
+let _allBooksSubjectLoaded = "all";
+
+async function loadAllBooks(subject = state.allBooksSubject, force = false) {
+  if (!force && _allBooksLoaded && _allBooksSubjectLoaded === subject) return;
+
+  allBooksLoading.classList.remove("hidden");
+  allBooksCount.classList.add("hidden");
+  allBooksGrid.innerHTML = "";
+
+  try {
+    const url = subject && subject !== "all"
+      ? `/api/books?subject=${encodeURIComponent(subject)}&limit=100`
+      : `/api/books?limit=100`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    allBooksLoading.classList.add("hidden");
+
+    allBooksCount.textContent = `${data.total} book${data.total !== 1 ? "s" : ""}`;
+    allBooksCount.classList.remove("hidden");
+    allBooksGrid.innerHTML = (data.books || []).map((b, i) => renderPinCard(b, i)).join("");
+    attachReserveListeners(allBooksGrid);
+
+    _allBooksLoaded = true;
+    _allBooksSubjectLoaded = subject;
+  } catch {
+    allBooksLoading.classList.add("hidden");
+    showToast("Failed to load books catalogue.", true);
+  }
+}
+
+// All Books subject filter chips
+document.querySelectorAll("#booksFilterStrip .filter-chip").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll("#booksFilterStrip .filter-chip").forEach((c) => c.classList.remove("filter-chip--active"));
+    chip.classList.add("filter-chip--active");
+    const subject = chip.dataset.subject || "all";
+    state.allBooksSubject = subject;
+    loadAllBooks(subject, true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Pin card renderer
-// Follows the pin-card component spec:
-//   - full-bleed colour block (simulates photography) at organic aspect ratio
-//   - pin-overlay-pill anchored to image corner with subject tag
-//   - high-demand badge (top-right) when demand_score ≥ 5
-//   - metadata below: title, author, subject tags, availability, action
 // ─────────────────────────────────────────────────────────────────────────────
 const RATIOS = ["ratio-square", "ratio-portrait", "ratio-tall", "ratio-xl"];
 const BOOK_SVG = `<svg class="pin-thumb__icon" width="48" height="48" viewBox="0 0 48 48" fill="none">
@@ -245,8 +337,8 @@ function renderPinCard(book, index) {
     </article>`;
 }
 
-function attachReserveListeners() {
-  document.querySelectorAll(".btn-pin-action").forEach((btn) => {
+function attachReserveListeners(container = document) {
+  container.querySelectorAll(".btn-pin-action").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       openReserveModal(
@@ -265,12 +357,19 @@ function attachReserveListeners() {
 let _pendingBookId = null;
 
 function openReserveModal(bookId, title, author, available) {
+  // Guard: validate student ID first
+  const sid = studentIdInput.value.trim();
+  const idErr = validateStudentIdInput(sid);
+  if (idErr) {
+    showToast(`Invalid Student ID: ${idErr}`, true);
+    studentIdInput.focus();
+    return;
+  }
   _pendingBookId = bookId;
-  // heading-lg (22px/600) in modal__title
   modalTitle.textContent    = available ? "Reserve this book" : "Join the waitlist";
   modalSubtitle.textContent = `"${title}" by ${author}`;
   modalBody.innerHTML = available
-    ? `<p>You are about to reserve a copy for student <strong>${esc(state.studentId)}</strong>.</p>
+    ? `<p>You are about to reserve a copy for student <strong>${esc(sid)}</strong>.</p>
        <p style="margin-top:8px;color:var(--color-mute);font-size:14px">Held for up to 14 days — IBM Robo will auto-release after that.</p>`
     : `<p>All copies are currently checked out.</p>
        <p style="margin-top:8px;color:var(--color-mute);font-size:14px">Join the waitlist and IBM Robo will promote you automatically when a copy is returned.</p>`;
@@ -295,7 +394,12 @@ modalConfirm.addEventListener("click", async () => {
       body: JSON.stringify({ student_id: state.studentId, book_id: bookId }),
     });
     const data = await res.json();
-    if (data.error) { showToast(data.error, true); return; }
+
+    // Show specific error (including duplicate-hold message from backend)
+    if (data.error) {
+      showToast(data.error, true);
+      return;
+    }
 
     state.reservations.push({
       id:         data._id,
@@ -306,13 +410,9 @@ modalConfirm.addEventListener("click", async () => {
       message:    data.ai_message || "",
     });
 
-    const msg = data.status === "active"
-      ? "Reservation confirmed!"
-      : "Added to waitlist.";
+    const msg = data.status === "active" ? "Reservation confirmed!" : "Added to waitlist.";
     showToast(msg);
     _pendingBookId = null;
-
-    // Update the card in the grid
     updatePinCardState(bookId, data.status);
   } catch {
     showToast("Reservation failed. Try again.", true);
@@ -320,19 +420,20 @@ modalConfirm.addEventListener("click", async () => {
 });
 
 function updatePinCardState(bookId, status) {
-  const card = document.querySelector(`.pin-card[data-id="${bookId}"]`);
-  if (!card) return;
-  const badge = card.querySelector(".avail-badge");
-  const btn   = card.querySelector(".btn-pin-action");
-  if (badge) {
-    badge.className = "avail-badge avail-badge--unavailable";
-    badge.textContent = "✗ Unavailable";
-  }
-  if (btn) {
-    btn.className = "btn-pin-action btn-pin-action--waitlist";
-    btn.textContent = "Waitlist";
-    btn.dataset.avail = "false";
-  }
+  // Update cards in both grids
+  document.querySelectorAll(`.pin-card[data-id="${bookId}"]`).forEach((card) => {
+    const badge = card.querySelector(".avail-badge");
+    const btn   = card.querySelector(".btn-pin-action");
+    if (badge) {
+      badge.className = "avail-badge avail-badge--unavailable";
+      badge.textContent = "✗ Unavailable";
+    }
+    if (btn) {
+      btn.className = "btn-pin-action btn-pin-action--waitlist";
+      btn.textContent = "Waitlist";
+      btn.dataset.avail = "false";
+    }
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -343,8 +444,8 @@ function renderReservations() {
     reservationsList.innerHTML = `
       <div class="state-card">
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-          <rect x="8" y="12" width="32" height="28" rx="3" fill="#f6f6f3" stroke="#dadad3" stroke-width="1.5"/>
-          <path d="M24 20v12M18 26h12" stroke="#91918c" stroke-width="1.5" stroke-linecap="round"/>
+          <rect x="8" y="12" width="32" height="28" rx="3" fill="var(--color-surface-card)" stroke="var(--color-hairline)" stroke-width="1.5"/>
+          <path d="M24 20v12M18 26h12" stroke="var(--color-ash)" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
         <p class="state-card__title">No holds yet</p>
         <p class="state-card__sub">Search for a book and tap Reserve to add your first hold</p>
@@ -358,7 +459,7 @@ function renderReservations() {
       <div class="res-card" data-res-id="${esc(r.id)}">
         <div class="res-card__info">
           <div class="res-card__title">${esc(r.bookTitle || "Unknown Book")}</div>
-          <div class="res-card__meta">${esc(r.bookAuthor || "")} · Student ID: ${esc(state.studentId)}</div>
+          <div class="res-card__meta">${esc(r.bookAuthor || "")} · Student: ${esc(state.studentId)}</div>
           ${r.message ? `<div class="res-card__message">${esc(r.message)}</div>` : ""}
         </div>
         <div class="res-card__actions">
@@ -377,7 +478,7 @@ function renderReservations() {
 
 async function cancelReservation(resId) {
   try {
-    const res = await fetch(`/api/reserve/${resId}`, { method: "DELETE" });
+    const res  = await fetch(`/api/reserve/${resId}`, { method: "DELETE" });
     const data = await res.json();
     if (data.error) { showToast(data.error, true); return; }
     const r = state.reservations.find((x) => x.id === resId);
@@ -390,12 +491,15 @@ async function cancelReservation(resId) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Dashboard panel
+// Dashboard panel (lazy — only fetches when first opened)
 // ─────────────────────────────────────────────────────────────────────────────
-async function loadDashboard() {
-  loadOrchStatus();   // live service health
-  loadExplain();      // IBM AI pipeline explainer (cached after first load)
+let _dashboardLoaded = false;
 
+async function loadDashboard() {
+  loadOrchStatus();
+  loadExplain();
+
+  if (_dashboardLoaded) return;
   highDemandList.innerHTML   = `<p style="color:var(--color-ash);font-size:13px">Loading…</p>`;
   automationAlerts.innerHTML = `<p style="color:var(--color-ash);font-size:13px">Loading…</p>`;
 
@@ -427,8 +531,10 @@ async function loadDashboard() {
           }</div>
         </div>`).join("");
     } else {
-      automationAlerts.innerHTML = `<p style="color:var(--color-ash);font-size:13px">No automation alerts. Run Robo Rules to scan the database.</p>`;
+      automationAlerts.innerHTML = `<p style="color:var(--color-ash);font-size:13px">No alerts yet. Run Robo Rules to scan the database.</p>`;
     }
+
+    _dashboardLoaded = true;
   } catch {
     showToast("Dashboard failed to load.", true);
   }
@@ -440,10 +546,12 @@ runRoboBtn.addEventListener("click", async () => {
   try {
     const res  = await fetch("/api/automation/run");
     const data = await res.json();
-    const msg  = `Robo rules ran — ${data.high_demand_alerts.length} demand alerts, ` +
-                 `${data.expired_reservations.length} expired, ` +
-                 `${data.low_stock_reorders.length} reorder alerts.`;
-    showToast(msg);
+    showToast(
+      `Robo ran — ${data.high_demand_alerts.length} demand alerts, ` +
+      `${data.expired_reservations.length} expired, ` +
+      `${data.low_stock_reorders.length} reorder alerts.`
+    );
+    _dashboardLoaded = false;   // Force refresh on next open
     loadDashboard();
   } catch {
     showToast("Automation run failed.", true);
@@ -456,7 +564,7 @@ runRoboBtn.addEventListener("click", async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Orchestration status
 // ─────────────────────────────────────────────────────────────────────────────
-const orchStatus     = $("orchStatus");
+const orchStatus      = $("orchStatus");
 const refreshStatusBtn = $("refreshStatusBtn");
 
 async function loadOrchStatus() {
@@ -481,7 +589,7 @@ async function loadOrchStatus() {
           ${detail}
         </div>`;
     }).join("");
-  } catch (e) {
+  } catch {
     orchStatus.innerHTML = `<p style="color:var(--color-error);font-size:13px">Could not reach /api/status — is the server running?</p>`;
   }
 }
@@ -491,7 +599,7 @@ refreshStatusBtn.addEventListener("click", loadOrchStatus);
 // ─────────────────────────────────────────────────────────────────────────────
 // AI Pipeline explainer
 // ─────────────────────────────────────────────────────────────────────────────
-const explainPanel    = $("explainPanel");
+const explainPanel     = $("explainPanel");
 const toggleExplainBtn = $("toggleExplainBtn");
 let _explainLoaded = false;
 
@@ -527,6 +635,42 @@ toggleExplainBtn.addEventListener("click", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Firebase Auth integration
+// Login overlay is controlled by auth.js (ES module), but we also expose
+// helpers that auth.js calls via window.
+// ─────────────────────────────────────────────────────────────────────────────
+const loginNavBtn  = $("loginNavBtn");
+const logoutNavBtn = $("logoutNavBtn");
+const loginOverlay = $("loginOverlay");
+
+loginNavBtn.addEventListener("click",  () => loginOverlay.classList.remove("hidden"));
+logoutNavBtn.addEventListener("click", () => {
+  if (window._firebaseSignOut) window._firebaseSignOut();
+});
+
+/** Called by auth.js when a user signs in */
+window._onAuthSignIn = (user) => {
+  loginOverlay.classList.add("hidden");
+  loginNavBtn.classList.add("hidden");
+  logoutNavBtn.classList.remove("hidden");
+  // Pre-fill student ID from email prefix when not already set
+  if (studentIdInput.value === "s001") {
+    const prefix = (user.email || "").split("@")[0].replace(/[^A-Za-z0-9_\-]/g, "").slice(0, 20);
+    if (prefix.length >= 2) studentIdInput.value = prefix;
+  }
+  state.studentId = studentIdInput.value.trim();
+};
+
+/** Exposed for auth.js — lets it read the current student ID input value */
+window._getStudentId = () => studentIdInput.value.trim();
+
+/** Called by auth.js when a user signs out */
+window._onAuthSignOut = () => {
+  loginNavBtn.classList.remove("hidden");
+  logoutNavBtn.classList.add("hidden");
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 function hideResults() {
@@ -545,8 +689,7 @@ let _toastTimer = null;
 function showToast(msg, error = false) {
   toastEl.textContent = msg;
   toastEl.className   = "toast" + (error ? " toast--error" : "");
-  // Force reflow so transition fires on re-show
-  void toastEl.offsetWidth;
+  void toastEl.offsetWidth;   // force reflow so transition fires on re-show
   toastEl.classList.add("toast--visible");
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => toastEl.classList.remove("toast--visible"), 3600);
@@ -558,5 +701,6 @@ function esc(str) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
