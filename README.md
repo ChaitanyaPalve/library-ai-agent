@@ -225,3 +225,9 @@ Rules run automatically via APScheduler (set `ENABLE_SCHEDULER=true` in `.env`) 
 ## License
 
 MIT
+
+///only for the editor///
+check for reservation and waitlist same person can't issue and hold the book 
+add fiction section 
+add more books 
+make it more user friendly 
