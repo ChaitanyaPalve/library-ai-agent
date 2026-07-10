@@ -98,7 +98,7 @@ function switchPanel(panelName) {
   document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
   const target = document.getElementById(`panel-${panelName}`);
   if (target) target.classList.add("active");
-  if (panelName === "reservations") renderReservations();
+  if (panelName === "reservations") fetchAndRenderReservations();
   if (panelName === "dashboard")    loadDashboard();
   if (panelName === "search")       { hideResults(); loadHomeBooks(state.homeGenre); }
 }
@@ -253,10 +253,6 @@ async function loadHomeBooks(genre = "all", force = false) {
 // Pin card renderer
 // ─────────────────────────────────────────────────────────────────────────────
 const RATIOS = ["ratio-square", "ratio-portrait", "ratio-tall", "ratio-xl"];
-const BOOK_SVG = `<svg class="pin-thumb__icon" width="48" height="48" viewBox="0 0 48 48" fill="none">
-  <rect x="10" y="6" width="28" height="36" rx="2" stroke="#000" stroke-width="2.5"/>
-  <path d="M16 14h16M16 20h16M16 26h10" stroke="#000" stroke-width="2" stroke-linecap="round"/>
-</svg>`;
 
 function renderPinCard(book, index) {
   const avail       = book.available_copies > 0;
@@ -279,11 +275,16 @@ function renderPinCard(book, index) {
   const copiesText = `${book.total_copies || 1} cop${(book.total_copies || 1) === 1 ? "y" : "ies"} total`;
   const quickInfo  = `<div class="pin-card__quick-info">${isbnText ? isbnText + " · " : ""}${copiesText}</div>`;
 
+  // Book cover: coloured block with title + author overlaid
+  const thumbCover = `
+    <div class="pin-card__cover-title">${esc(book.title)}</div>
+    <div class="pin-card__cover-author">${esc(book.author)}</div>`;
+
   return `
     <article class="pin-card pin-card--${ratio}" role="listitem"
              data-id="${esc(book._id)}" aria-label="${esc(book.title)}">
       <div class="pin-card__image">
-        <div class="pin-card__thumb ${thumbClass}">${BOOK_SVG}</div>
+        <div class="pin-card__thumb ${thumbClass}">${thumbCover}</div>
         ${demandBadge}
         ${overlayPill}
         ${quickInfo}
@@ -431,8 +432,45 @@ function updatePinCardState(bookId, status) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Reservations panel
 // ─────────────────────────────────────────────────────────────────────────────
+// ── Fetch active reservations from API (called on panel open) ──────────────
+async function fetchAndRenderReservations() {
+  reservationsList.innerHTML = `
+    <div class="state-card">
+      <div class="lib-spinner" aria-hidden="true"><div class="lib-spinner__ring"></div></div>
+      <p class="state-card__sub">Loading your holds…</p>
+    </div>`;
+
+  try {
+    const sid = state.studentId;
+    // Fetch reservations for this student via profile endpoint (has history)
+    const res  = await fetch(`/api/profile/${encodeURIComponent(sid)}`);
+    const data = await res.json();
+
+    // Fetch ALL reservations to find active/waitlisted for this student
+    const resRes  = await fetch(`/api/reservations/${encodeURIComponent(sid)}`);
+    if (resRes.ok) {
+      const resData = await resRes.json();
+      const fetched = (resData.reservations || []).map((r) => ({
+        id:         r._id,
+        bookId:     r.book_id,
+        bookTitle:  r.book_title || r.book_id,
+        bookAuthor: r.book_author || "",
+        status:     r.status,
+        message:    "",
+      }));
+      // Merge: keep any in-session ones not yet in fetched, add fetched ones not in session
+      const sessionIds = new Set(state.reservations.map((x) => x.id));
+      fetched.forEach((r) => { if (!sessionIds.has(r.id)) state.reservations.push(r); });
+    }
+  } catch {
+    // API may not have the reservations endpoint — fall through to render what we have
+  }
+  renderReservations();
+}
+
 function renderReservations() {
-  if (!state.reservations.length) {
+  const active = state.reservations.filter((r) => r.status !== "cancelled");
+  if (!state.reservations.length && !active.length) {
     reservationsList.innerHTML = `
       <div class="state-card">
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
@@ -639,8 +677,9 @@ window._onAuthSignIn = (user) => {
   const sid = sessionStorage.getItem("studentId") || user.displayName || "student";
   state.studentId = sid;
   studentIdInput.value = sid;
-  // Load homepage books after sign-in
+  // Load homepage books and WRTD banner after sign-in
   loadHomeBooks("all");
+  loadWRTD();
 };
 
 window._getStudentId = () => state.studentId;
@@ -652,6 +691,7 @@ window._getStudentId = () => state.studentId;
 // (demo mode sets it synchronously via sessionStorage check), load books now.
 if (sessionStorage.getItem("studentId")) {
   loadHomeBooks("all");
+  loadWRTD();
 }
 
 function hideResults() {
@@ -836,3 +876,80 @@ async function loadRecommendations(force = false) {
     showToast("Could not load recommendations.", true);
   }
 }
+
+// =============================================================================
+// WHAT TO READ TODAY  (WatsonX AI — homepage banner)
+// =============================================================================
+
+const wrtdBanner  = $("wrtdBanner");
+const wrtdLoading = $("wrtdLoading");
+const wrtdText    = $("wrtdText");
+const wrtdShelf   = $("wrtdShelf");
+
+// Shelf book mini-card (horizontal strip)
+function renderShelfCard(book, index) {
+  const thumbClass = `pin-thumb--${index % 18}`;
+  const avail = book.available_copies > 0;
+  return `
+    <div class="shelf-card ${thumbClass}">
+      <div class="shelf-card__title">${esc(book.title)}</div>
+      <div class="shelf-card__author">${esc(book.author)}</div>
+      <button class="shelf-card__btn btn-pin-action${avail ? "" : " btn-pin-action--waitlist"}"
+              data-id="${esc(book._id)}"
+              data-title="${esc(book.title)}"
+              data-author="${esc(book.author)}"
+              data-avail="${avail}">
+        ${avail ? "Reserve" : "Waitlist"}
+      </button>
+    </div>`;
+}
+
+let _wrtdLoaded = false;
+
+async function loadWRTD(force = false) {
+  if (_wrtdLoaded && !force) return;
+
+  wrtdBanner.classList.add("hidden");
+  wrtdLoading.classList.remove("hidden");
+
+  try {
+    const sid = state.studentId;
+    const res  = await fetch(`/api/recommendations/${encodeURIComponent(sid)}`);
+    const data = await res.json();
+
+    wrtdLoading.classList.add("hidden");
+
+    // Pick 4 random books from catalogue if no history yet
+    let books = [];
+    if (data.history && data.history.length) {
+      // Use reading-history books as "what you might re-explore" + random popular
+      const popularRes = await fetch("/api/books/high-demand?threshold=1&limit=8");
+      const popularData = await popularRes.json();
+      books = (popularData.books || []).slice(0, 5);
+      // AI summary from recommendations
+      const summary = (data.recommendations || "").split("\n")[0] || "Here are today's top picks for you.";
+      wrtdText.textContent = summary.replace(/^•\s*/, "").slice(0, 120);
+    } else {
+      // No history — show popular books
+      const popularRes = await fetch("/api/books/high-demand?threshold=0&limit=5");
+      const popularData = await popularRes.json();
+      books = popularData.books || [];
+      wrtdText.textContent = "Popular in your library right now — reserve one to build your reading history.";
+    }
+
+    if (books.length) {
+      wrtdShelf.innerHTML = books.map((b, i) => renderShelfCard(b, i)).join("");
+      attachReserveListeners(wrtdShelf);
+      wrtdBanner.classList.remove("hidden");
+      _wrtdLoaded = true;
+    }
+  } catch {
+    wrtdLoading.classList.add("hidden");
+    // Silently skip — banner is non-critical
+  }
+}
+
+$("wrtdBtn").addEventListener("click", () => {
+  switchPanel("recommendations");
+  loadRecommendations();
+});

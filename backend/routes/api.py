@@ -427,6 +427,32 @@ def recommendations(student_id: str):
 # User profile  (reading history + review stats)
 # ---------------------------------------------------------------------------
 
+@api.route("/reservations/<student_id>", methods=["GET"])
+def student_reservations(student_id: str):
+    """
+    GET /api/reservations/<student_id>
+    Returns all reservations for this student, with book title/author joined in.
+    """
+    db = get_db()
+    cursor = db.reservations.find(
+        {"student_id": student_id},
+    ).sort("created_at", -1).limit(50)
+
+    results = []
+    for r in cursor:
+        book_id = r.get("book_id")
+        book = db.books.find_one({"_id": book_id}, {"title": 1, "author": 1}) if book_id else None
+        results.append({
+            "_id":         str(r["_id"]),
+            "book_id":     str(book_id) if book_id else "",
+            "book_title":  book["title"]  if book else "",
+            "book_author": book["author"] if book else "",
+            "status":      r.get("status", ""),
+            "created_at":  r.get("created_at", "").isoformat() if hasattr(r.get("created_at",""), "isoformat") else str(r.get("created_at","")),
+        })
+    return jsonify({"reservations": results, "total": len(results)})
+
+
 @api.route("/profile/<student_id>", methods=["GET"])
 def user_profile(student_id: str):
     """
