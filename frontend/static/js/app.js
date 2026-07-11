@@ -49,6 +49,7 @@ const modalConfirm      = $("modalConfirm");
 const modalCancel       = $("modalCancel");
 const modalClose        = $("modalClose");
 const reservationsList  = $("reservationsList");
+const historyList       = $("historyList");
 const highDemandList    = $("highDemandList");
 const automationAlerts  = $("automationAlerts");
 const runRoboBtn        = $("runRoboBtn");
@@ -400,6 +401,8 @@ modalConfirm.addEventListener("click", async () => {
       bookTitle:  data.book_title,
       bookAuthor: data.book_author,
       status:     data.status,
+      issuedAt:   data.issued_at  || null,
+      dueDate:    data.due_date   || null,
       message:    data.ai_message || "",
     });
 
@@ -432,6 +435,20 @@ function updatePinCardState(bookId, status) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Reservations panel
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** Compute days/hours remaining until dueDate string (ISO). Returns display text. */
+function formatDueCountdown(dueDateStr) {
+  if (!dueDateStr) return null;
+  const due  = new Date(dueDateStr);
+  const now  = new Date();
+  const msLeft = due - now;
+  if (msLeft <= 0) return "⚠ Overdue";
+  const daysLeft  = Math.floor(msLeft / 86400000);
+  const hoursLeft = Math.floor((msLeft % 86400000) / 3600000);
+  if (daysLeft > 0) return `Due in ${daysLeft}d ${hoursLeft}h`;
+  return `Due in ${hoursLeft}h`;
+}
+
 // ── Fetch active reservations from API (called on panel open) ──────────────
 async function fetchAndRenderReservations() {
   reservationsList.innerHTML = `
@@ -439,71 +456,138 @@ async function fetchAndRenderReservations() {
       <div class="lib-spinner" aria-hidden="true"><div class="lib-spinner__ring"></div></div>
       <p class="state-card__sub">Loading your holds…</p>
     </div>`;
+  historyList.innerHTML = "";
 
   try {
     const sid = state.studentId;
-    // Fetch reservations for this student via profile endpoint (has history)
-    const res  = await fetch(`/api/profile/${encodeURIComponent(sid)}`);
-    const data = await res.json();
-
-    // Fetch ALL reservations to find active/waitlisted for this student
-    const resRes  = await fetch(`/api/reservations/${encodeURIComponent(sid)}`);
+    const resRes = await fetch(`/api/reading-log/${encodeURIComponent(sid)}`);
     if (resRes.ok) {
       const resData = await resRes.json();
-      const fetched = (resData.reservations || []).map((r) => ({
-        id:         r._id,
-        bookId:     r.book_id,
-        bookTitle:  r.book_title || r.book_id,
-        bookAuthor: r.book_author || "",
-        status:     r.status,
-        message:    "",
-      }));
-      // Merge: keep any in-session ones not yet in fetched, add fetched ones not in session
+      const all = resData.log || [];
+
+      // Active/waitlisted → merge into state.reservations
+      const activeOnes = all.filter((r) => r.status === "active" || r.status === "waitlisted");
       const sessionIds = new Set(state.reservations.map((x) => x.id));
-      fetched.forEach((r) => { if (!sessionIds.has(r.id)) state.reservations.push(r); });
+      activeOnes.forEach((r) => {
+        if (!sessionIds.has(r._id)) {
+          state.reservations.push({
+            id:         r._id,
+            bookId:     r.book_id,
+            bookTitle:  r.book_title,
+            bookAuthor: r.book_author,
+            status:     r.status,
+            issuedAt:   r.issued_at,
+            dueDate:    r.due_date,
+            message:    "",
+          });
+        } else {
+          // Update status in case it changed
+          const existing = state.reservations.find((x) => x.id === r._id);
+          if (existing) {
+            existing.status   = r.status;
+            existing.dueDate  = r.due_date;
+            existing.issuedAt = r.issued_at;
+          }
+        }
+      });
+
+      // History (returned + cancelled)
+      const history = all.filter((r) => r.status === "returned" || r.status === "cancelled");
+      renderHistory(history);
     }
   } catch {
-    // API may not have the reservations endpoint — fall through to render what we have
+    // Fall through to render what we have in session
   }
   renderReservations();
 }
 
 function renderReservations() {
-  const active = state.reservations.filter((r) => r.status !== "cancelled");
-  if (!state.reservations.length && !active.length) {
+  const visible = state.reservations.filter((r) => r.status === "active" || r.status === "waitlisted");
+  if (!visible.length) {
     reservationsList.innerHTML = `
       <div class="state-card">
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
           <rect x="8" y="12" width="32" height="28" rx="3" fill="var(--color-surface-card)" stroke="var(--color-hairline)" stroke-width="1.5"/>
           <path d="M24 20v12M18 26h12" stroke="var(--color-ash)" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
-        <p class="state-card__title">No holds yet</p>
-        <p class="state-card__sub">Search for a book and tap Reserve to add your first hold</p>
+        <p class="state-card__title">No active holds</p>
+        <p class="state-card__sub">Search for a book and tap Reserve or Waitlist to add your first hold</p>
       </div>`;
     return;
   }
 
-  reservationsList.innerHTML = state.reservations.map((r) => {
+  reservationsList.innerHTML = visible.map((r) => {
     const chipClass = `status-chip status-chip--${r.status}`;
+    const countdown = r.status === "active" ? formatDueCountdown(r.dueDate) : null;
+    const countdownHtml = countdown
+      ? `<div class="due-countdown ${countdown.startsWith("⚠") ? "due-countdown--overdue" : ""}">${esc(countdown)}</div>`
+      : "";
+    const issuedHtml = r.issuedAt
+      ? `<div class="res-card__meta-small">Issued: ${new Date(r.issuedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>`
+      : "";
     return `
       <div class="res-card" data-res-id="${esc(r.id)}">
         <div class="res-card__info">
           <div class="res-card__title">${esc(r.bookTitle || "Unknown Book")}</div>
           <div class="res-card__meta">${esc(r.bookAuthor || "")} · Student: ${esc(state.studentId)}</div>
+          ${issuedHtml}
+          ${countdownHtml}
           ${r.message ? `<div class="res-card__message">${esc(r.message)}</div>` : ""}
         </div>
         <div class="res-card__actions">
           <span class="${chipClass}">${r.status}</span>
-          ${r.status !== "cancelled"
-            ? `<button class="btn-cancel" data-id="${esc(r.id)}" aria-label="Cancel reservation">Cancel</button>`
+          ${r.status === "active"
+            ? `<button class="btn-return" data-id="${esc(r.id)}" aria-label="Return book">Return</button>`
             : ""}
+          <button class="btn-cancel" data-id="${esc(r.id)}" aria-label="Cancel reservation">Cancel</button>
         </div>
       </div>`;
   }).join("");
 
-  document.querySelectorAll(".btn-cancel").forEach((btn) => {
+  reservationsList.querySelectorAll(".btn-cancel").forEach((btn) => {
     btn.addEventListener("click", () => cancelReservation(btn.dataset.id));
   });
+  reservationsList.querySelectorAll(".btn-return").forEach((btn) => {
+    btn.addEventListener("click", () => returnBook(btn.dataset.id));
+  });
+}
+
+function renderHistory(history) {
+  if (!history || !history.length) {
+    historyList.innerHTML = `
+      <div class="state-card" style="padding:var(--space-xl) 0">
+        <p class="state-card__sub">No returned books yet</p>
+      </div>`;
+    return;
+  }
+  historyList.innerHTML = history.map((r) => {
+    const statusLabel = r.status === "returned" ? "Returned" : "Cancelled";
+    const chipCls = r.status === "returned" ? "status-chip--returned" : "status-chip--cancelled";
+    const duration = r.read_duration_days != null
+      ? `Read in ${r.read_duration_days} day${r.read_duration_days !== 1 ? "s" : ""}`
+      : "";
+    const returnedDate = r.returned_at
+      ? new Date(r.returned_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "";
+    const issuedDate = r.issued_at
+      ? new Date(r.issued_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "";
+    return `
+      <div class="res-card res-card--history">
+        <div class="res-card__info">
+          <div class="res-card__title">${esc(r.book_title || "Unknown Book")}</div>
+          <div class="res-card__meta">${esc(r.book_author || "")}</div>
+          <div class="res-card__history-meta">
+            ${issuedDate ? `<span>Issued: ${esc(issuedDate)}</span>` : ""}
+            ${returnedDate ? `<span>Returned: ${esc(returnedDate)}</span>` : ""}
+            ${duration ? `<span class="history-duration">${esc(duration)}</span>` : ""}
+          </div>
+        </div>
+        <div class="res-card__actions">
+          <span class="status-chip ${chipCls}">${statusLabel}</span>
+        </div>
+      </div>`;
+  }).join("");
 }
 
 async function cancelReservation(resId) {
@@ -515,8 +599,32 @@ async function cancelReservation(resId) {
     if (r) r.status = "cancelled";
     renderReservations();
     showToast("Reservation cancelled.");
+    // Reload history to show newly cancelled entry
+    fetchAndRenderReservations();
   } catch {
     showToast("Cancel failed.", true);
+  }
+}
+
+async function returnBook(resId) {
+  const btn = reservationsList.querySelector(`.btn-return[data-id="${resId}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = "Returning…"; }
+  try {
+    const res  = await fetch(`/api/reserve/${resId}/return`, { method: "POST" });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); if (btn) { btn.disabled = false; btn.textContent = "Return"; } return; }
+    // Remove from active state
+    state.reservations = state.reservations.filter((x) => x.id !== resId);
+    showToast(
+      data.read_duration_days != null
+        ? `Book returned! You read it in ${data.read_duration_days} day(s).`
+        : "Book returned successfully!"
+    );
+    // Refresh the full panel to show history
+    fetchAndRenderReservations();
+  } catch {
+    showToast("Return failed. Try again.", true);
+    if (btn) { btn.disabled = false; btn.textContent = "Return"; }
   }
 }
 

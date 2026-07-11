@@ -187,6 +187,24 @@ body {
 /* Hide browser clear button */
 .search-bar__input::-webkit-search-cancel-button { -webkit-appearance: none; }
 
+/* Embedded search submit button inside the pill */
+.search-bar__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: none;
+  border-radius: var(--rounded-full);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.search-bar__submit:hover  { background: var(--color-primary-hover); }
+.search-bar__submit:active { background: var(--color-primary-pressed); }
+
 /* Right nav cluster */
 .nav__actions {
   display: flex;
@@ -357,27 +375,29 @@ body {
    HERO SECTION
    ============================================================================= */
 .hero {
-  padding: var(--space-section) 0 var(--space-xl);
+  padding: var(--space-xl) 0 var(--space-md);
   display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
+  flex-direction: row;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-lg);
 }
 
 .hero__headline {
-  font-size: 52px;
+  font-size: 28px;
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.8px;
+  line-height: 1.2;
+  letter-spacing: -0.4px;
   color: var(--color-ink);
-  max-width: 560px;
+  white-space: nowrap;
 }
 
 .hero__sub {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
-  line-height: 1.6;
+  line-height: 1.5;
   color: var(--color-mute);
-  max-width: 520px;
+  max-width: 440px;
 }
 
 /* =============================================================================
@@ -470,11 +490,6 @@ body {
   position: relative;
   transition: box-shadow 0.18s, transform 0.18s;
 }
-.pin-card:hover {
-  box-shadow: 0 6px 20px rgba(0,0,0,0.09);
-  transform: translateY(-3px);
-}
-
 /* Colour-block image area */
 .pin-card__image {
   width: 100%;
@@ -773,6 +788,85 @@ body {
 .status-chip--active     { background: var(--color-success-pale); color: var(--color-success-deep); }
 .status-chip--waitlisted { background: #fff3cd; color: #7a5200; }
 .status-chip--cancelled  { background: var(--color-surface-card); color: var(--color-mute); }
+.status-chip--returned   { background: #dbeafe; color: #1e40af; }
+
+/* Section labels inside My Holds */
+.holds-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-ash);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: var(--space-sm);
+}
+.holds-section-sub {
+  font-size: 13px;
+  color: var(--color-mute);
+  margin-bottom: var(--space-md);
+}
+
+/* Due date countdown pill on active holds */
+.due-countdown {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: var(--rounded-full);
+  border: 1px solid #bfdbfe;
+  margin-top: var(--space-xs);
+  width: fit-content;
+}
+.due-countdown--overdue {
+  background: #fee2e2;
+  color: var(--color-error);
+  border-color: #fca5a5;
+}
+
+/* Issued-at sub-meta line */
+.res-card__meta-small {
+  font-size: 12px;
+  color: var(--color-ash);
+  margin-top: 2px;
+}
+
+/* Return book button */
+.btn-return {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--rounded-md);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-return:hover  { background: #bfdbfe; }
+.btn-return:active { background: #93c5fd; }
+.btn-return:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* History entry cards */
+.res-card--history { opacity: 0.88; }
+.res-card__history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-xs);
+  font-size: 12px;
+  color: var(--color-mute);
+}
+.history-duration {
+  font-weight: 600;
+  color: var(--color-primary);
+}
 
 .btn-cancel {
   display: inline-flex;
@@ -1361,14 +1455,12 @@ body {
 
 @media (max-width: 1024px) {
   .pin-grid { columns: 3; }
-  .hero__headline { font-size: 42px; }
   .nav__search-wrap { max-width: 320px; }
 }
 
 @media (max-width: 768px) {
   .pin-grid { columns: 2; column-gap: 8px; }
-  .hero { padding: 36px 0 var(--space-xl); }
-  .hero__headline { font-size: 34px; }
+  .hero { padding: var(--space-lg) 0 var(--space-sm); flex-direction: column; gap: 2px; }
   .panel-header__title { font-size: 20px; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .nav__student-input { display: none; }
@@ -1379,7 +1471,6 @@ body {
 
 @media (max-width: 480px) {
   .pin-grid { columns: 1; }
-  .hero__headline { font-size: 28px; }
   .nav__search-wrap { max-width: 160px; }
   .modal { padding: 0; align-items: flex-end; }
   .modal__card {
@@ -1588,6 +1679,30 @@ body {
 [data-theme="dark"] .orch-card__badge--fail { background: rgba(239,68,68,.2); color: #fca5a5; }
 [data-theme="dark"] .status-chip--active { background: rgba(16,185,129,.2); color: #6ee7b7; }
 [data-theme="dark"] .status-chip--waitlisted { background: rgba(234,179,8,.15); color: #fde68a; }
+[data-theme="dark"] .status-chip--returned { background: rgba(59,130,246,.2); color: #93c5fd; }
+
+/* Due countdown dark */
+[data-theme="dark"] .due-countdown {
+  background: rgba(59,130,246,.15);
+  color: #93c5fd;
+  border-color: rgba(59,130,246,.3);
+}
+[data-theme="dark"] .due-countdown--overdue {
+  background: rgba(239,68,68,.15);
+  color: #fca5a5;
+  border-color: rgba(239,68,68,.3);
+}
+
+/* Return button dark */
+[data-theme="dark"] .btn-return {
+  background: rgba(59,130,246,.15);
+  color: #93c5fd;
+  border-color: rgba(59,130,246,.3);
+}
+[data-theme="dark"] .btn-return:hover { background: rgba(59,130,246,.25); }
+
+/* Search bar submit button dark */
+[data-theme="dark"] .search-bar__submit { background: var(--color-primary); }
 
 /* Explain summary */
 [data-theme="dark"] .explain-summary {
@@ -2013,7 +2128,7 @@ html { scroll-behavior: smooth; }
   flex-direction: column !important;
   gap: 6px;
   padding: 14px 12px !important;
-  align-items: flex-start !important;
+  align-items: flex-end !important;
   justify-content: flex-end !important;
 }
 
@@ -2029,6 +2144,7 @@ html { scroll-behavior: smooth; }
   word-break: break-word;
   position: relative;
   z-index: 1;
+  text-align: right;
 }
 
 .pin-card__cover-author {
@@ -2041,6 +2157,7 @@ html { scroll-behavior: smooth; }
   max-width: 100%;
   position: relative;
   z-index: 1;
+  text-align: right;
 }
 
 [data-theme="dark"] .pin-card__cover-title  { color: rgba(255,255,255,0.82); }

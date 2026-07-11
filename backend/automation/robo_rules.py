@@ -128,7 +128,14 @@ def rule_expire_reservations() -> list[str]:
     """
     db = get_db()
     cutoff = datetime.utcnow() - timedelta(days=MAX_HOLD_DAYS)
-    expired = db.reservations.find({"status": "active", "created_at": {"$lt": cutoff}})
+    # Use due_date if present (new reservations), fall back to created_at for legacy records
+    expired = db.reservations.find({
+        "status": "active",
+        "$or": [
+            {"due_date":    {"$lt": datetime.utcnow()}},
+            {"due_date":    {"$exists": False}, "created_at": {"$lt": cutoff}},
+        ],
+    })
     cancelled_ids = []
 
     for res in expired:
