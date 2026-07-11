@@ -97,6 +97,35 @@ Format each as:
 
 Recommendations:"""
 
+_CHATBOT_PROMPT = """You are a friendly university library chatbot.
+
+User message: "{message}"
+Mode: {mode}
+
+Rules:
+- If mode is "mood" or "interest": suggest 3–5 books that match the user's mood, emotion, or topic interest.
+  Format each as:  • "<Title>" by <Author> — <one-line reason>
+- If mode is "suggest": the user wants to suggest a book for the library to acquire.
+  Acknowledge the suggestion warmly, confirm the title/author if mentioned, and explain the library will review it.
+- If mode is "query": the user has a general library question (hours, policies, fines, procedures, etc.).
+  Answer helpfully and concisely in 2–4 sentences.
+- For any other mode: answer naturally as a library assistant.
+
+Keep the tone warm and concise. Do not include any preamble like "Sure!" or "Of course!".
+
+Response:"""
+
+_SUGGEST_BOOK_PROMPT = """You are a university library acquisition assistant.
+A student has suggested the following book for the library to purchase:
+- Title: {title}
+- Author: {author}
+- Reason: {reason}
+
+Write a warm 2-sentence acknowledgement confirming the suggestion has been recorded
+and that the library team will review it for acquisition.
+
+Response:"""
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -146,5 +175,24 @@ def generate_reservation_message(student_id: str, book: dict, status: str) -> st
         book_author=book.get("author", "Unknown"),
         status=status,
     )
+    result = model.generate_text(prompt=prompt)
+    return result.strip() if isinstance(result, str) else result
+
+
+def generate_chatbot_response(message: str, mode: str = "general") -> str:
+    """
+    Generate a chatbot reply.
+    mode: "mood" | "interest" | "suggest" | "query" | "general"
+    """
+    model = _get_model()
+    prompt = _CHATBOT_PROMPT.format(message=message, mode=mode)
+    result = model.generate_text(prompt=prompt)
+    return result.strip() if isinstance(result, str) else result
+
+
+def generate_suggest_book_reply(title: str, author: str, reason: str) -> str:
+    """Generate an acknowledgement for a student book-acquisition suggestion."""
+    model = _get_model()
+    prompt = _SUGGEST_BOOK_PROMPT.format(title=title, author=author, reason=reason)
     result = model.generate_text(prompt=prompt)
     return result.strip() if isinstance(result, str) else result

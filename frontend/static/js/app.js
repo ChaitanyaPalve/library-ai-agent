@@ -1061,3 +1061,174 @@ $("wrtdBtn").addEventListener("click", () => {
   switchPanel("recommendations");
   loadRecommendations();
 });
+
+
+// =============================================================================
+// CHATBOT WIDGET
+// =============================================================================
+
+(function () {
+  const fab             = $("chatbotFab")
+  const panel           = $("chatbotPanel")
+  const closeBtn        = $("chatbotClose")
+  const messagesEl      = $("chatbotMessages")
+  const inputEl         = $("chatbotInput")
+  const sendBtn         = $("chatbotSend")
+  const suggestForm     = $("chatbotSuggestForm")
+  const inputRow        = $("chatbotInputRow")
+  const suggestSubmit   = $("suggestSubmitBtn")
+
+  let currentMode = "mood"
+
+  // ── Placeholders per mode ────────────────────────────────────────────────
+  const PLACEHOLDERS = {
+    mood:     "How are you feeling today?",
+    interest: "What topic or genre interests you?",
+    query:    "Any library question — hours, fines, policies…",
+    suggest:  "",
+  }
+
+  // ── Open / Close ─────────────────────────────────────────────────────────
+  fab.addEventListener("click", () => {
+    panel.classList.toggle("hidden")
+    if (!panel.classList.contains("hidden") && messagesEl.childElementCount === 0) {
+      addBotBubble("Hi! I'm your Library AI assistant powered by WatsonX.\n\nPick a mode above:\n• Mood / Feel — get book suggestions based on how you feel\n• Interests — books by topic or genre\n• Ask Library — general library questions\n• Suggest Book — recommend a book for us to acquire")
+    }
+    if (!panel.classList.contains("hidden")) inputEl.focus()
+  })
+  closeBtn.addEventListener("click", () => panel.classList.add("hidden"))
+
+  // Close on Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !panel.classList.contains("hidden")) panel.classList.add("hidden")
+  })
+
+  // ── Mode tabs ─────────────────────────────────────────────────────────────
+  panel.querySelectorAll(".chatbot-mode-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      panel.querySelectorAll(".chatbot-mode-btn").forEach((b) => {
+        b.classList.remove("chatbot-mode-btn--active")
+        b.setAttribute("aria-selected", "false")
+      })
+      btn.classList.add("chatbot-mode-btn--active")
+      btn.setAttribute("aria-selected", "true")
+      currentMode = btn.dataset.mode
+
+      if (currentMode === "suggest") {
+        suggestForm.classList.remove("hidden")
+        inputRow.classList.add("hidden")
+      } else {
+        suggestForm.classList.add("hidden")
+        inputRow.classList.remove("hidden")
+        inputEl.placeholder = PLACEHOLDERS[currentMode] || "Type a message…"
+        inputEl.focus()
+      }
+    })
+  })
+
+  // ── Utilities ─────────────────────────────────────────────────────────────
+  function addUserBubble(text) {
+    const d = document.createElement("div")
+    d.className = "chatbot-bubble chatbot-bubble--user"
+    d.textContent = text
+    messagesEl.appendChild(d)
+    messagesEl.scrollTop = messagesEl.scrollHeight
+  }
+
+  function addBotBubble(text) {
+    const d = document.createElement("div")
+    d.className = "chatbot-bubble chatbot-bubble--bot"
+    d.textContent = text
+    messagesEl.appendChild(d)
+    messagesEl.scrollTop = messagesEl.scrollHeight
+    return d
+  }
+
+  function addTypingIndicator() {
+    const d = document.createElement("div")
+    d.className = "chatbot-bubble chatbot-bubble--typing"
+    d.id = "chatbotTyping"
+    d.textContent = "WatsonX AI is thinking…"
+    messagesEl.appendChild(d)
+    messagesEl.scrollTop = messagesEl.scrollHeight
+    return d
+  }
+
+  function removeTyping() {
+    const t = document.getElementById("chatbotTyping")
+    if (t) t.remove()
+  }
+
+  // ── Send a chat message ───────────────────────────────────────────────────
+  async function sendMessage() {
+    const msg = inputEl.value.trim()
+    if (!msg) return
+    inputEl.value = ""
+    addUserBubble(msg)
+    const typing = addTypingIndicator()
+
+    try {
+      const res = await fetch("/api/chatbot", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          message:    msg,
+          mode:       currentMode,
+          student_id: window._getStudentId ? window._getStudentId() : "anonymous",
+        }),
+      })
+      removeTyping()
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      addBotBubble(data.reply || "Sorry, I couldn't generate a response.")
+    } catch (err) {
+      removeTyping()
+      addBotBubble("Sorry, something went wrong. Please try again.")
+    }
+  }
+
+  sendBtn.addEventListener("click", sendMessage)
+  inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage() })
+
+  // ── Suggest-book form submission ──────────────────────────────────────────
+  suggestSubmit.addEventListener("click", async () => {
+    const title  = ($("suggestTitle").value  || "").trim()
+    const author = ($("suggestAuthor").value || "").trim()
+    const reason = ($("suggestReason").value || "").trim()
+
+    if (!title) {
+      showToast("Please enter a book title.", true)
+      return
+    }
+
+    suggestSubmit.disabled = true
+    suggestSubmit.textContent = "Submitting…"
+
+    try {
+      const res = await fetch("/api/suggest-book", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          student_id: window._getStudentId ? window._getStudentId() : "anonymous",
+          title, author, reason,
+        }),
+      })
+      const data = await res.json()
+
+      // Switch to message thread and show AI reply
+      suggestForm.classList.add("hidden")
+      inputRow.classList.remove("hidden")
+      addUserBubble(`Suggest: "${title}"${author ? " by " + author : ""}`)
+      addBotBubble(data.reply || "Your suggestion has been submitted. Thank you!")
+
+      $("suggestTitle").value  = ""
+      $("suggestAuthor").value = ""
+      $("suggestReason").value = ""
+    } catch {
+      showToast("Failed to submit suggestion. Please try again.", true)
+    } finally {
+      suggestSubmit.disabled = false
+      suggestSubmit.textContent = "Submit Suggestion"
+    }
+  })
+})()

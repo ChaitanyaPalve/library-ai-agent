@@ -370,6 +370,63 @@
   <input id="studentId" type="hidden" value="1234" />
   <span id="studentIdError" class="hidden"></span>
 
+  <!-- ══════════════════  CHATBOT WIDGET  ══════════════════ -->
+  <!-- Floating trigger button -->
+  <button id="chatbotFab" class="chatbot-fab" aria-label="Open library chatbot" title="Chat with Library AI">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="9"  cy="10" r="1" fill="currentColor"/>
+      <circle cx="12" cy="10" r="1" fill="currentColor"/>
+      <circle cx="15" cy="10" r="1" fill="currentColor"/>
+    </svg>
+  </button>
+
+  <!-- Chatbot panel -->
+  <div id="chatbotPanel" class="chatbot-panel hidden" role="dialog" aria-label="Library chatbot" aria-modal="false">
+    <div class="chatbot-panel__header">
+      <div class="chatbot-panel__title-row">
+        <span class="chatbot-panel__title">Library AI Chat</span>
+        <span class="chatbot-panel__badge">WatsonX AI</span>
+      </div>
+      <button id="chatbotClose" class="btn-icon-circular chatbot-panel__close" aria-label="Close chat">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Mode selector tabs -->
+    <div class="chatbot-modes" role="tablist" aria-label="Chat mode">
+      <button class="chatbot-mode-btn chatbot-mode-btn--active" data-mode="mood" role="tab" aria-selected="true">Mood / Feel</button>
+      <button class="chatbot-mode-btn" data-mode="interest" role="tab" aria-selected="false">Interests</button>
+      <button class="chatbot-mode-btn" data-mode="query" role="tab" aria-selected="false">Ask Library</button>
+      <button class="chatbot-mode-btn" data-mode="suggest" role="tab" aria-selected="false">Suggest Book</button>
+    </div>
+
+    <!-- Message thread -->
+    <div id="chatbotMessages" class="chatbot-messages" aria-live="polite" aria-label="Chat messages"></div>
+
+    <!-- Suggest-book form (visible only in suggest mode) -->
+    <div id="chatbotSuggestForm" class="chatbot-suggest-form hidden">
+      <input id="suggestTitle"  class="chatbot-suggest-input" placeholder="Book title *" autocomplete="off"/>
+      <input id="suggestAuthor" class="chatbot-suggest-input" placeholder="Author (optional)" autocomplete="off"/>
+      <textarea id="suggestReason" class="chatbot-suggest-textarea" placeholder="Why should we add it? (optional)" rows="2"></textarea>
+      <button id="suggestSubmitBtn" class="btn-primary chatbot-suggest-submit">Submit Suggestion</button>
+    </div>
+
+    <!-- Regular input row -->
+    <div id="chatbotInputRow" class="chatbot-input-row">
+      <input id="chatbotInput" class="chatbot-input" type="text"
+             placeholder="How are you feeling today?" autocomplete="off" />
+      <button id="chatbotSend" class="chatbot-send-btn" aria-label="Send">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M2 10l16-8-8 16V11L2 10z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
   {{ firebase_config_script | safe }}
   <script type="module" src="/js/auth.js" defer></script>
   <script src="/js/app.js" defer></script>
