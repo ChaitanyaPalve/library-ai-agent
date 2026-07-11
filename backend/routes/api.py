@@ -18,7 +18,10 @@ import os
 from flask import Blueprint, request, jsonify
 
 from backend.services.watson_nlu   import analyse_query, analyse_sentiment
-from backend.services.watsonx_ai   import generate_search_response, generate_reservation_message, recommend_books
+from backend.services.watsonx_ai   import (
+    generate_search_response, generate_reservation_message, recommend_books,
+    generate_chatbot_response, generate_suggest_book_reply,
+)
 from backend.services.library_lms  import (
     search_books, check_availability,
     reserve_book, cancel_reservation, return_book,
@@ -473,3 +476,64 @@ def user_profile(student_id: str):
         "history_count": len(history),
         "review_count": review_count,
     })
+
+
+# ---------------------------------------------------------------------------
+# Chatbot  (mood/interest suggestions, student queries)
+# ---------------------------------------------------------------------------
+
+@api.route("/chatbot", methods=["POST"])
+def chatbot():
+    """
+    POST /api/chatbot
+    Body: { "message": "I feel adventurous", "mode": "mood", "student_id": "s001" }
+    mode: "mood" | "interest" | "query" | "general"
+    Returns: { "reply": "..." }
+    """
+    body    = request.get_json(force=True)
+    message = body.get("message", "").strip()
+    mode    = body.get("mode", "general").strip()
+
+    if not message:
+        return jsonify({"error": "message is required"}), 400
+
+    student_id = body.get("student_id", "anonymous")
+    log_query(student_id, f"[chatbot:{mode}] {message}", [])
+
+    reply = generate_chatbot_response(message, mode)
+    return jsonify({"reply": reply, "mode": mode})
+
+
+# ---------------------------------------------------------------------------
+# Suggest book for library acquisition
+# ---------------------------------------------------------------------------
+
+@api.route("/suggest-book", methods=["POST"])
+def suggest_book():
+    """
+    POST /api/suggest-book
+    Body: { "student_id": "s001", "title": "...", "author": "...", "reason": "..." }
+    Stores the suggestion and returns an AI acknowledgement.
+    """
+    body       = request.get_json(force=True)
+    student_id = body.get("student_id", "anonymous").strip()
+    title      = body.get("title", "").strip()
+    author     = body.get("author", "").strip()
+    reason     = body.get("reason", "").strip()
+
+    if not title:
+        return jsonify({"error": "title is required"}), 400
+
+    # Persist suggestion to MongoDB
+    db = get_db()
+    db.book_suggestions.insert_one({
+        "student_id": student_id,
+        "title":      title,
+        "author":     author,
+        "reason":     reason,
+        "status":     "pending",
+        "created_at": __import__("datetime").datetime.utcnow(),
+    })
+
+    reply = generate_suggest_book_reply(title, author or "Unknown", reason or "No reason provided")
+    return jsonify({"reply": reply, "title": title, "author": author}), 201
