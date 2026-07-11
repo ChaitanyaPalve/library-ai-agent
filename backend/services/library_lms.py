@@ -12,7 +12,7 @@ Provides functions to:
 All persistence is via MongoDB (models.db).
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo import ReturnDocument
@@ -165,6 +165,12 @@ def reserve_book(student_id: str, book_id: str) -> dict:
     reservation["book_title"] = book.get("title")
     reservation["book_author"] = book.get("author")
     reservation["status"] = status
+    # Serialize datetime fields for JSON
+    reservation["issued_at"]  = reservation["issued_at"].isoformat()  if reservation.get("issued_at")  else None
+    reservation["due_date"]   = reservation["due_date"].isoformat()   if reservation.get("due_date")   else None
+    reservation["created_at"] = reservation["created_at"].isoformat() if reservation.get("created_at") else None
+    reservation["updated_at"] = reservation["updated_at"].isoformat() if reservation.get("updated_at") else None
+    reservation["book_id"]    = book_id  # ensure string (overwrite ObjectId)
     return reservation
 
 
@@ -192,6 +198,113 @@ def cancel_reservation(reservation_id: str) -> dict:
         {"$set": {"status": "cancelled", "updated_at": datetime.utcnow()}},
     )
     return {"reservation_id": reservation_id, "status": "cancelled"}
+
+
+def return_book(reservation_id: str) -> dict:
+    """
+    Mark a reservation as 'returned', restore the copy to inventory,
+    and record how long the student held the book (read_duration_days).
+    """
+    db = get_db()
+    try:
+        res_obj = ObjectId(reservation_id)
+    except InvalidId:
+        return {"error": "Invalid reservation ID"}
+
+    reservation = db.reservations.find_one({"_id": res_obj})
+    if not reservation:
+        return {"error": "Reservation not found"}
+
+    if reservation["status"] != "active":
+        return {"error": f"Cannot return — reservation is '{reservation['status']}'"}
+
+    now = datetime.utcnow()
+    issued_at = reservation.get("issued_at") or reservation.get("created_at")
+    read_duration_days = None
+    if issued_at:
+        delta = now - issued_at
+        read_duration_days = round(delta.total_seconds() / 86400, 1)
+
+    # Restore the book copy
+    db.books.update_one(
+        {"_id": reservation["book_id"]},
+        {"$inc": {"available_copies": 1}, "$set": {"updated_at": now}},
+    )
+
+    db.reservations.update_one(
+        {"_id": res_obj},
+        {"$set": {
+            "status": "returned",
+            "returned_at": now,
+            "read_duration_days": read_duration_days,
+            "updated_at": now,
+        }},
+    )
+
+    # Try to promote the first waitlisted student for this book
+    next_wait = db.reservations.find_one(
+        {"book_id": reservation["book_id"], "status": "waitlisted"},
+        sort=[("created_at", 1)],
+    )
+    promoted = None
+    if next_wait:
+        # Decrement the copy we just restored for the promoted student
+        db.books.update_one(
+            {"_id": reservation["book_id"]},
+            {"$inc": {"available_copies": -1}, "$set": {"updated_at": now}},
+        )
+        db.reservations.update_one(
+            {"_id": next_wait["_id"]},
+            {"$set": {
+                "status": "active",
+                "issued_at": now,
+                "due_date": now + timedelta(days=7),
+                "updated_at": now,
+            }},
+        )
+        promoted = next_wait["student_id"]
+
+    return {
+        "reservation_id": reservation_id,
+        "status": "returned",
+        "read_duration_days": read_duration_days,
+        "promoted_student": promoted,
+    }
+
+
+def get_reading_log(student_id: str, limit: int = 50) -> list[dict]:
+    """
+    Return the student's complete book history:
+      - issued (active)
+      - returned (with read_duration_days)
+      - cancelled (kept as record)
+    Sorted newest first.
+    """
+    db = get_db()
+    cursor = db.reservations.find(
+        {"student_id": student_id},
+    ).sort("created_at", -1).limit(limit)
+
+    results = []
+    for r in cursor:
+        book_id = r.get("book_id")
+        book = db.books.find_one({"_id": book_id}, {"title": 1, "author": 1}) if book_id else None
+        issued_at   = r.get("issued_at") or r.get("created_at")
+        returned_at = r.get("returned_at")
+        due_date    = r.get("due_date")
+        results.append({
+            "_id":               str(r["_id"]),
+            "book_id":           str(book_id) if book_id else "",
+            "book_title":        book["title"]  if book else "",
+            "book_author":       book["author"] if book else "",
+            "status":            r.get("status", ""),
+            "issued_at":         issued_at.isoformat()   if issued_at   else None,
+            "due_date":          due_date.isoformat()    if due_date    else None,
+            "returned_at":       returned_at.isoformat() if returned_at else None,
+            "read_duration_days": r.get("read_duration_days"),
+            "created_at":        r["created_at"].isoformat() if r.get("created_at") else None,
+        })
+    return results
 
 
 # ---------------------------------------------------------------------------

@@ -107,10 +107,17 @@ def make_query(student_id: str, raw_text: str, matched_book_ids: list) -> dict:
 
 
 def make_reservation(student_id: str, book_id, status: str = "active") -> dict:
-    return {
+    now = datetime.utcnow()
+    from datetime import timedelta
+    doc = {
         "student_id": student_id,
         "book_id": book_id,
-        "status": status,           # active | waitlisted | completed | cancelled
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "status": status,           # active | waitlisted | returned | cancelled
+        "created_at": now,
+        "updated_at": now,
     }
+    # Only active reservations get an issued_at and due_date (7 days)
+    if status == "active":
+        doc["issued_at"] = now
+        doc["due_date"]  = now + timedelta(days=7)
+    return doc

@@ -21,10 +21,10 @@ from backend.services.watson_nlu   import analyse_query, analyse_sentiment
 from backend.services.watsonx_ai   import generate_search_response, generate_reservation_message, recommend_books
 from backend.services.library_lms  import (
     search_books, check_availability,
-    reserve_book, cancel_reservation,
+    reserve_book, cancel_reservation, return_book,
     log_query, get_high_demand_books, get_all_books,
     validate_student_id, upsert_student,
-    add_review, get_reviews, get_reading_history,
+    add_review, get_reviews, get_reading_history, get_reading_log,
 )
 from backend.automation.robo_rules import run_all_rules
 from backend.models.db import get_db, get_client
@@ -321,6 +321,15 @@ def cancel(reservation_id: str):
     return jsonify(result)
 
 
+@api.route("/reserve/<reservation_id>/return", methods=["POST"])
+def return_reservation(reservation_id: str):
+    """POST /api/reserve/<id>/return — mark a book as returned."""
+    result = return_book(reservation_id)
+    if "error" in result:
+        return jsonify(result), 400
+    return jsonify(result)
+
+
 # ---------------------------------------------------------------------------
 # Student persistence
 # ---------------------------------------------------------------------------
@@ -433,24 +442,18 @@ def student_reservations(student_id: str):
     GET /api/reservations/<student_id>
     Returns all reservations for this student, with book title/author joined in.
     """
-    db = get_db()
-    cursor = db.reservations.find(
-        {"student_id": student_id},
-    ).sort("created_at", -1).limit(50)
-
-    results = []
-    for r in cursor:
-        book_id = r.get("book_id")
-        book = db.books.find_one({"_id": book_id}, {"title": 1, "author": 1}) if book_id else None
-        results.append({
-            "_id":         str(r["_id"]),
-            "book_id":     str(book_id) if book_id else "",
-            "book_title":  book["title"]  if book else "",
-            "book_author": book["author"] if book else "",
-            "status":      r.get("status", ""),
-            "created_at":  r.get("created_at", "").isoformat() if hasattr(r.get("created_at",""), "isoformat") else str(r.get("created_at","")),
-        })
+    results = get_reading_log(student_id, limit=50)
     return jsonify({"reservations": results, "total": len(results)})
+
+
+@api.route("/reading-log/<student_id>", methods=["GET"])
+def reading_log(student_id: str):
+    """
+    GET /api/reading-log/<student_id>
+    Full reading log: issued, returned (with read_duration), cancelled.
+    """
+    log = get_reading_log(student_id, limit=100)
+    return jsonify({"log": log, "total": len(log)})
 
 
 @api.route("/profile/<student_id>", methods=["GET"])
