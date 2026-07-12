@@ -100,10 +100,10 @@ def validate_student_id(student_id: str) -> str | None:
 
 def reserve_book(student_id: str, book_id: str) -> dict:
     """
-    Reserve a book for a student.
+    Issue a book to a student.
 
-    - If copies are available  → status = "active",  decrement available_copies
-    - If no copies available   → status = "waitlisted"
+    - If copies are available and total active issues < 2 → status = "active", decrement available_copies
+    - If no copies available or total active issues >= 2  → status = "waitlisted"
     - If the student already has an active OR waitlisted hold → error (duplicate guard)
     Returns the reservation document with an "ai_message" placeholder.
     """
@@ -119,14 +119,13 @@ def reserve_book(student_id: str, book_id: str) -> dict:
         return {"error": "Invalid book ID"}
 
     # ── Duplicate-hold guard ─────────────────────────────────────────────────
-    # A student must not hold both a reservation and a waitlist spot for the same book.
     existing = db.reservations.find_one({
         "student_id": student_id,
         "book_id": obj_id,
         "status": {"$in": ["active", "waitlisted"]},
     })
     if existing:
-        label = "reservation" if existing["status"] == "active" else "waitlist spot"
+        label = "issue" if existing["status"] == "active" else "waitlist spot"
         return {
             "error": (
                 f"You already have an active {label} for this book. "
@@ -134,20 +133,29 @@ def reserve_book(student_id: str, book_id: str) -> dict:
             )
         }
 
-    # Atomically decrement if available
-    book = db.books.find_one_and_update(
-        {"_id": obj_id, "available_copies": {"$gt": 0}},
-        {
-            "$inc": {"available_copies": -1, "demand_score": 1},
-            "$set": {"updated_at": datetime.utcnow()},
-        },
-        return_document=ReturnDocument.AFTER,
-    )
+    # ── Check active-issue limit (max 2 per book) ────────────────────────────
+    active_count = db.reservations.count_documents({
+        "book_id": obj_id,
+        "status": "active",
+    })
+
+    # Atomically decrement if available AND under the 2-issue limit
+    if active_count < 2:
+        book = db.books.find_one_and_update(
+            {"_id": obj_id, "available_copies": {"$gt": 0}},
+            {
+                "$inc": {"available_copies": -1, "demand_score": 1},
+                "$set": {"updated_at": datetime.utcnow()},
+            },
+            return_document=ReturnDocument.AFTER,
+        )
+    else:
+        book = None
 
     if book:
         status = "active"
     else:
-        # No copies – still bump demand_score for prioritisation
+        # No copies or limit reached – still bump demand_score for prioritisation
         db.books.update_one(
             {"_id": obj_id},
             {"$inc": {"demand_score": 1}, "$set": {"updated_at": datetime.utcnow()}},
@@ -400,7 +408,7 @@ def get_reading_history(student_id: str, limit: int = 20) -> list[dict]:
     """
     db = get_db()
     cursor = db.reservations.find(
-        {"student_id": student_id, "status": {"$in": ["active", "completed"]}},
+        {"student_id": student_id, "status": {"$in": ["active", "returned"]}},
     ).sort("created_at", -1).limit(limit)
 
     book_ids = []
