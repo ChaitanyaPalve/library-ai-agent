@@ -102,11 +102,8 @@
       </div>
 
       <div class="login-hint">
-        <strong>Demo:</strong>&nbsp; Student ID: <strong>1234</strong> &nbsp;·&nbsp; Password: <strong>1234</strong>
-      </div>
-
-      <div class="login-notice">
-        To obtain your personal Student ID, please contact the librarian via WhatsApp.
+        <strong>use these credentials:</strong><br>
+        Student ID: <strong>1234/edunet</strong> &nbsp;·&nbsp; Password: <strong>123456/edunet</strong>
       </div>
 
       <div id="loginError" class="login-error hidden"></div>
@@ -123,6 +120,15 @@
           <input id="loginPassword" class="field-input" type="password"
                  placeholder="Enter your password" autocomplete="current-password" required />
         </div>
+        <label class="field-label" for="loginStudentId">Student ID</label>
+        <input id="loginStudentId" class="field-input" type="text"
+               placeholder="e.g. 1234 or edunet"
+               autocomplete="username" required />
+
+        <label class="field-label" for="loginPassword">Password</label>
+        <input id="loginPassword" class="field-input" type="password"
+               placeholder="••••••••" autocomplete="current-password" required />
+
         <button type="submit" class="btn-primary btn-primary--full" id="loginBtn">Sign in</button>
       </form>
 
