@@ -259,6 +259,23 @@ def book_detail(book_id: str):
 # All books catalogue listing
 # ---------------------------------------------------------------------------
 
+@api.route("/mood-books/<mood>", methods=["GET"])
+def mood_books(mood: str):
+    """
+    GET /api/mood-books/<mood>  — returns books tagged with mood:<mood>
+    Supports: sad, happy, stressed, adventurous, motivated, curious, romantic, bored
+    """
+    from backend.services.library_lms import get_all_books
+    tag = f"mood:{mood.lower()}"
+    db = get_db()
+    cursor = db.books.find({"subject_tags": {"$regex": tag, "$options": "i"}}).sort("title", 1).limit(50)
+    results = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        results.append(doc)
+    return jsonify({"books": results, "total": len(results), "mood": mood})
+
+
 @api.route("/books", methods=["GET"])
 def all_books():
     """

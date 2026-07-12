@@ -24,6 +24,29 @@ const state = {
   homeGenre: "all",
 };
 
+// Quotes — defined early so all functions can use them
+const LIB_QUOTES = [
+  "\"A reader lives a thousand lives before he dies.\" — George R.R. Martin",
+  "\"Not all those who wander are lost.\" — J.R.R. Tolkien",
+  "\"A book is a dream that you hold in your hands.\" — Neil Gaiman",
+  "\"Today a reader, tomorrow a leader.\" — Margaret Fuller",
+  "\"The more that you read, the more things you will know.\" — Dr. Seuss",
+  "\"A library is not a luxury but one of the necessities of life.\" — Henry Ward Beecher",
+  "\"Think before you speak. Read before you think.\" — Fran Lebowitz",
+  "\"There is no friend as loyal as a book.\" — Ernest Hemingway",
+  "\"Reading is to the mind what exercise is to the body.\" — Joseph Addison",
+  "\"Books are a uniquely portable magic.\" — Stephen King",
+  "\"You can never get a cup of tea large enough or a book long enough to suit me.\" — C.S. Lewis",
+  "\"One must always be careful of books, and what is inside them.\" — Cassandra Clare",
+];
+function randomQuote() {
+  return LIB_QUOTES[Math.floor(Math.random() * LIB_QUOTES.length)];
+}
+function setQuoteEl(id) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = randomQuote();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // DOM refs
 // ─────────────────────────────────────────────────────────────────────────────
@@ -204,6 +227,7 @@ async function doSearch() {
       attachTagListeners(booksGrid);
     } else {
       emptyState.classList.remove("hidden");
+      setQuoteEl("emptyQuote");
     }
 
   } catch {
@@ -270,7 +294,7 @@ function renderPinCard(book, index) {
   const badgeClass = avail ? "avail-badge--available" : "avail-badge--unavailable";
   const badgeText  = avail ? `✓ ${book.available_copies} available` : "✗ Unavailable";
   const btnClass   = avail ? "" : "btn-pin-action--waitlist";
-  const btnText    = avail ? "Reserve" : "Waitlist";
+  const btnText    = avail ? "Issue" : "Waitlist";
 
   const isbnText   = book.isbn ? `ISBN ${esc(book.isbn)}` : "";
   const copiesText = `${book.total_copies || 1} cop${(book.total_copies || 1) === 1 ? "y" : "ies"} total`;
@@ -360,14 +384,14 @@ let _pendingBookId = null;
 function openReserveModal(bookId, title, author, available) {
   const sid = state.studentId;
   _pendingBookId = bookId;
-  modalTitle.textContent    = available ? "Reserve this book" : "Join the waitlist";
+  modalTitle.textContent    = available ? "Issue this book" : "Join the waitlist";
   modalSubtitle.textContent = `"${title}" by ${author}`;
   modalBody.innerHTML = available
-    ? `<p>You are about to reserve a copy for student <strong>${esc(sid)}</strong>.</p>
+    ? `<p>You are about to issue a copy for student <strong>${esc(sid)}</strong>.</p>
        <p style="margin-top:8px;color:var(--color-mute);font-size:14px">Held for up to 14 days — IBM Robo will auto-release after that.</p>`
-    : `<p>All copies are currently checked out.</p>
+    : `<p>All copies are currently issued or unavailable.</p>
        <p style="margin-top:8px;color:var(--color-mute);font-size:14px">Join the waitlist and IBM Robo will promote you automatically when a copy is returned.</p>`;
-  modalConfirm.textContent = available ? "Confirm Reservation" : "Join Waitlist";
+  modalConfirm.textContent = available ? "Confirm Issue" : "Join Waitlist";
   reserveModal.classList.remove("hidden");
 }
 
@@ -406,7 +430,7 @@ modalConfirm.addEventListener("click", async () => {
       message:    data.ai_message || "",
     });
 
-    const msg = data.status === "active" ? "Reservation confirmed!" : "Added to waitlist.";
+    const msg = data.status === "active" ? "Book issued successfully!" : "Added to waitlist.";
     showToast(msg);
     _pendingBookId = null;
     updatePinCardState(bookId, data.status);
@@ -511,7 +535,8 @@ function renderReservations() {
           <path d="M24 20v12M18 26h12" stroke="var(--color-ash)" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
         <p class="state-card__title">No active holds</p>
-        <p class="state-card__sub">Search for a book and tap Reserve or Waitlist to add your first hold</p>
+        <p class="state-card__sub">Search for a book and tap Issue or Waitlist to add your first hold</p>
+        <div class="lib-quote">${esc(randomQuote())}</div>
       </div>`;
     return;
   }
@@ -598,7 +623,7 @@ async function cancelReservation(resId) {
     const r = state.reservations.find((x) => x.id === resId);
     if (r) r.status = "cancelled";
     renderReservations();
-    showToast("Reservation cancelled.");
+    showToast("Issue cancelled.");
     // Reload history to show newly cancelled entry
     fetchAndRenderReservations();
   } catch {
@@ -802,6 +827,37 @@ if (sessionStorage.getItem("studentId")) {
   loadWRTD();
 }
 
+// Populate all quote placeholders on load
+setQuoteEl("emptyQuote");
+setQuoteEl("recsEmptyQuote");
+
+// =============================================================================
+// SUGGEST A BOOK BAR  — standalone button in clear space
+// =============================================================================
+function openSuggestTab() {
+  // Open chatbot panel on Suggest Book tab
+  const panel = $("chatbotPanel");
+  panel.classList.remove("hidden");
+  // Activate the suggest tab
+  panel.querySelectorAll(".chatbot-mode-btn").forEach((b) => {
+    b.classList.remove("chatbot-mode-btn--active");
+    b.setAttribute("aria-selected", "false");
+  });
+  const suggestTab = panel.querySelector('.chatbot-mode-btn[data-mode="suggest"]');
+  if (suggestTab) {
+    suggestTab.classList.add("chatbot-mode-btn--active");
+    suggestTab.setAttribute("aria-selected", "true");
+  }
+  $("chatbotSuggestForm").classList.remove("hidden");
+  $("chatbotInputRow").classList.add("hidden");
+}
+
+const suggestBookBarBtn = $("suggestBookBarBtn");
+if (suggestBookBarBtn) suggestBookBarBtn.addEventListener("click", openSuggestTab);
+
+const emptyStateSuggestBtn = $("emptyStateSuggestBtn");
+if (emptyStateSuggestBtn) emptyStateSuggestBtn.addEventListener("click", openSuggestTab);
+
 function hideResults() {
   nluInsights.classList.add("hidden");
   aiMessage.classList.add("hidden");
@@ -1000,6 +1056,7 @@ function renderShelfCard(book, index) {
   const avail = book.available_copies > 0;
   return `
     <div class="shelf-card ${thumbClass}">
+      <div class="shelf-card__hot">🔥 Hot Pick</div>
       <div class="shelf-card__title">${esc(book.title)}</div>
       <div class="shelf-card__author">${esc(book.author)}</div>
       <button class="shelf-card__btn btn-pin-action${avail ? "" : " btn-pin-action--waitlist"}"
@@ -1007,7 +1064,7 @@ function renderShelfCard(book, index) {
               data-title="${esc(book.title)}"
               data-author="${esc(book.author)}"
               data-avail="${avail}">
-        ${avail ? "Reserve" : "Waitlist"}
+        ${avail ? "Issue" : "Waitlist"}
       </button>
     </div>`;
 }
@@ -1027,26 +1084,22 @@ async function loadWRTD(force = false) {
 
     wrtdLoading.classList.add("hidden");
 
-    // Pick 4 random books from catalogue if no history yet
     let books = [];
     if (data.history && data.history.length) {
-      // Use reading-history books as "what you might re-explore" + random popular
-      const popularRes = await fetch("/api/books/high-demand?threshold=1&limit=8");
+      const popularRes = await fetch("/api/books/high-demand?threshold=1&limit=10");
       const popularData = await popularRes.json();
       books = (popularData.books || []).slice(0, 5);
-      // AI summary from recommendations
-      const summary = (data.recommendations || "").split("\n")[0] || "Here are today's top picks for you.";
-      wrtdText.textContent = summary.replace(/^•\s*/, "").slice(0, 120);
+      const summary = (data.recommendations || "").split("\n")[0] || "Today's top picks curated just for you.";
+      wrtdText.textContent = summary.replace(/^\u2022\s*/, "").slice(0, 120);
     } else {
-      // No history — show popular books
       const popularRes = await fetch("/api/books/high-demand?threshold=0&limit=5");
       const popularData = await popularRes.json();
-      books = popularData.books || [];
-      wrtdText.textContent = "Popular in your library right now — reserve one to build your reading history.";
+      books = (popularData.books || []).slice(0, 5);
+      wrtdText.textContent = "🔥 5 hot picks from your library — issue one to start your reading history.";
     }
 
     if (books.length) {
-      wrtdShelf.innerHTML = books.map((b, i) => renderShelfCard(b, i)).join("");
+      wrtdShelf.innerHTML = books.slice(0, 5).map((b, i) => renderShelfCard(b, i)).join("");
       attachReserveListeners(wrtdShelf);
       wrtdBanner.classList.remove("hidden");
       _wrtdLoaded = true;
