@@ -265,7 +265,6 @@ def mood_books(mood: str):
     GET /api/mood-books/<mood>  — returns books tagged with mood:<mood>
     Supports: sad, happy, stressed, adventurous, motivated, curious, romantic, bored
     """
-    from backend.services.library_lms import get_all_books
     tag = f"mood:{mood.lower()}"
     db = get_db()
     cursor = db.books.find({"subject_tags": {"$regex": tag, "$options": "i"}}).sort("title", 1).limit(50)

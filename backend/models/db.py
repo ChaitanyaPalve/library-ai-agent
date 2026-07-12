@@ -108,7 +108,6 @@ def make_query(student_id: str, raw_text: str, matched_book_ids: list) -> dict:
 
 def make_reservation(student_id: str, book_id, status: str = "active") -> dict:
     now = datetime.utcnow()
-    from datetime import timedelta
     doc = {
         "student_id": student_id,
         "book_id": book_id,

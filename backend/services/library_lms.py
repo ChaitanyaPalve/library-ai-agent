@@ -360,9 +360,8 @@ def add_review(student_id: str, book_id: str, review_text: str,
                sentiment_label: str, sentiment_score: float) -> dict:
     """Insert a review and return the stored doc (with stringified _id)."""
     db = get_db()
-    from bson import ObjectId as _ObjId
     try:
-        obj_id = _ObjId(book_id)
+        obj_id = ObjectId(book_id)
     except Exception:
         return {"error": "Invalid book ID"}
     doc = {
@@ -383,9 +382,8 @@ def add_review(student_id: str, book_id: str, review_text: str,
 def get_reviews(book_id: str) -> list[dict]:
     """Return all reviews for a book, newest first."""
     db = get_db()
-    from bson import ObjectId as _ObjId
     try:
-        obj_id = _ObjId(book_id)
+        obj_id = ObjectId(book_id)
     except Exception:
         return []
     cursor = db.reviews.find({"book_id": obj_id}).sort("created_at", -1)
