@@ -600,11 +600,454 @@ MOOD_BOOKS = (
     MOTIVATED_BOOKS + CURIOUS_BOOKS + ROMANTIC_MOOD_BOOKS + THRILLING_BOOKS
 )
 
+# =============================================================================
+# CHATBOT-SUGGESTED BOOKS
+# These are the titles WatsonX AI actually recommends in the chatbot for each
+# mood / interest keyword. Organised by the user phrase that triggers them.
+# =============================================================================
+
+# ── "I feel lonely / isolated" ────────────────────────────────────────────────
+LONELY_BOOKS = [
+    make_book("The Midnight Library", "Matt Haig", "978-0-525-55947-4",
+              ["mood:sad", "mood:lonely", "fiction", "magical realism", "self-discovery"], total_copies=4),
+    make_book("Norwegian Wood", "Haruki Murakami", "978-0-375-70402-0",
+              ["mood:sad", "mood:lonely", "fiction", "literary fiction", "coming of age"], total_copies=3),
+    make_book("The Perks of Being a Wallflower", "Stephen Chbosky", "978-1-451-69696-3",
+              ["mood:sad", "mood:lonely", "fiction", "young adult", "coming of age"], total_copies=4),
+    make_book("Eleanor & Park", "Rainbow Rowell", "978-1-250-01257-1",
+              ["mood:sad", "mood:lonely", "fiction", "young adult", "romance"], total_copies=3),
+    make_book("All the Bright Places", "Jennifer Niven", "978-0-385-75588-7",
+              ["mood:sad", "mood:lonely", "fiction", "young adult", "mental health"], total_copies=3),
+    make_book("A Man Called Ove", "Fredrik Backman", "978-1-476-73801-5",
+              ["mood:sad", "mood:lonely", "fiction", "contemporary", "uplifting"], total_copies=4),
+    make_book("The Little Prince", "Antoine de Saint-Exupéry", "978-0-156-01219-5",
+              ["mood:sad", "mood:lonely", "fiction", "classic", "philosophical"], total_copies=5),
+]
+
+# ── "I feel anxious / overwhelmed / burned out" ───────────────────────────────
+ANXIOUS_BOOKS = [
+    make_book("First, We Make the Beast Beautiful", "Sarah Wilson", "978-0-062-85961-4",
+              ["mood:stressed", "mood:anxious", "self-help", "anxiety", "mindfulness"], total_copies=3),
+    make_book("The Anxiety Solution", "Chloe Brotheridge", "978-0-718-18529-7",
+              ["mood:stressed", "mood:anxious", "self-help", "anxiety", "CBT"], total_copies=3),
+    make_book("Burnout: The Secret to Unlocking the Stress Cycle", "Emily Nagoski", "978-1-984-82300-3",
+              ["mood:stressed", "mood:anxious", "self-help", "burnout", "women"], total_copies=3),
+    make_book("Full Catastrophe Living", "Jon Kabat-Zinn", "978-0-345-53972-4",
+              ["mood:stressed", "mood:anxious", "mindfulness", "MBSR", "health"], total_copies=2),
+    make_book("The Body Keeps the Score", "Bessel van der Kolk", "978-0-143-12742-1",
+              ["mood:stressed", "mood:anxious", "non-fiction", "trauma", "mental health"], total_copies=3),
+    make_book("Reasons to Stay Alive", "Matt Haig", "978-0-143-10723-2",
+              ["mood:stressed", "mood:anxious", "biography", "memoir", "mental health"], total_copies=4),
+    make_book("How to Stop Worrying and Start Living", "Dale Carnegie", "978-0-671-73335-0",
+              ["mood:stressed", "mood:anxious", "self-help", "classic", "worry"], total_copies=3),
+    make_book("Untamed", "Glennon Doyle", "978-1-984-80125-9",
+              ["mood:stressed", "mood:anxious", "biography", "memoir", "empowerment"], total_copies=4),
+]
+
+# ── "I feel happy / excited / joyful" ────────────────────────────────────────
+JOYFUL_BOOKS = [
+    make_book("The 100-Year-Old Man Who Climbed Out the Window and Disappeared", "Jonas Jonasson", "978-1-401-31026-5",
+              ["mood:happy", "fiction", "comedy", "adventure", "contemporary"], total_copies=3),
+    make_book("Catch-22", "Joseph Heller", "978-1-451-62634-8",
+              ["mood:happy", "fiction", "classic", "satire", "war"], total_copies=2),
+    make_book("P.G. Wodehouse: The Code of the Woosters", "P. G. Wodehouse", "978-0-393-31306-1",
+              ["mood:happy", "fiction", "classic", "comedy", "british"], total_copies=2),
+    make_book("Where the Crawdads Sing", "Delia Owens", "978-0-735-22454-8",
+              ["mood:happy", "fiction", "mystery", "nature", "coming of age"], total_copies=5),
+    make_book("The Guernsey Literary and Potato Peel Pie Society", "Mary Ann Shaffer", "978-0-385-34099-1",
+              ["mood:happy", "fiction", "historical fiction", "books about books", "heartwarming"], total_copies=3),
+    make_book("The Thursday Murder Club", "Richard Osman", "978-0-241-42557-3",
+              ["mood:happy", "fiction", "mystery", "comedy", "cozy"], total_copies=4),
+    make_book("Klara and the Sun", "Kazuo Ishiguro", "978-0-593-31817-1",
+              ["mood:happy", "fiction", "science fiction", "literary fiction", "AI"], total_copies=3),
+]
+
+# ── "I want something inspirational / life-changing" ─────────────────────────
+LIFE_CHANGING_BOOKS = [
+    make_book("The Power of Habit", "Charles Duhigg", "978-0-812-98160-4",
+              ["mood:motivated", "non-fiction", "habits", "psychology", "neuroscience"], total_copies=4),
+    make_book("Essentialism: The Disciplined Pursuit of Less", "Greg McKeown", "978-0-804-13714-9",
+              ["mood:motivated", "self-help", "productivity", "simplicity", "focus"], total_copies=3),
+    make_book("The 4-Hour Work Week", "Tim Ferriss", "978-0-307-35313-9",
+              ["mood:motivated", "self-help", "entrepreneurship", "lifestyle", "productivity"], total_copies=3),
+    make_book("Rich Dad Poor Dad", "Robert T. Kiyosaki", "978-1-612-68097-9",
+              ["mood:motivated", "self-help", "personal finance", "entrepreneurship"], total_copies=4),
+    make_book("The Road Less Travelled", "M. Scott Peck", "978-0-743-24315-7",
+              ["mood:motivated", "self-help", "psychology", "spirituality", "growth"], total_copies=3),
+    make_book("Meditations", "Marcus Aurelius", "978-0-140-44140-6",
+              ["mood:motivated", "mood:curious", "philosophy", "stoicism", "classic"], total_copies=4),
+    make_book("Letters from a Stoic", "Seneca", "978-0-140-44210-6",
+              ["mood:motivated", "mood:curious", "philosophy", "stoicism", "classic"], total_copies=3),
+    make_book("How to Win Friends and Influence People", "Dale Carnegie", "978-0-671-02735-1",
+              ["mood:motivated", "self-help", "communication", "leadership", "classic"], total_copies=5),
+    make_book("Never Split the Difference", "Chris Voss", "978-0-062-40780-1",
+              ["mood:motivated", "non-fiction", "negotiation", "communication", "FBI"], total_copies=3),
+    make_book("The War of Art", "Steven Pressfield", "978-1-936-89120-7",
+              ["mood:motivated", "self-help", "creativity", "writing", "discipline"], total_copies=3),
+]
+
+# ── "I want a fantasy / escape / magic" ──────────────────────────────────────
+FANTASY_BOOKS = [
+    make_book("The Lord of the Rings", "J. R. R. Tolkien", "978-0-544-00341-5",
+              ["mood:adventurous", "fiction", "fantasy", "epic", "classic"], total_copies=3),
+    make_book("Harry Potter and the Philosopher's Stone", "J. K. Rowling", "978-0-439-70818-8",
+              ["mood:adventurous", "fiction", "fantasy", "magic", "young adult"], total_copies=6),
+    make_book("The Name of the Wind", "Patrick Rothfuss", "978-0-756-40407-9",
+              ["mood:adventurous", "fiction", "fantasy", "magic", "epic fantasy"], total_copies=3),
+    make_book("A Game of Thrones", "George R. R. Martin", "978-0-553-57340-2",
+              ["mood:adventurous", "fiction", "fantasy", "epic", "political"], total_copies=4),
+    make_book("The Night Circus", "Erin Morgenstern", "978-0-307-74441-0",
+              ["mood:adventurous", "mood:romantic", "fiction", "fantasy", "magical realism"], total_copies=3),
+    make_book("Six of Crows", "Leigh Bardugo", "978-1-250-07643-9",
+              ["mood:adventurous", "fiction", "fantasy", "heist", "young adult"], total_copies=4),
+    make_book("The Priory of the Orange Tree", "Samantha Shannon", "978-1-635-57525-3",
+              ["mood:adventurous", "fiction", "fantasy", "feminism", "dragons"], total_copies=2),
+    make_book("Jonathan Strange & Mr Norrell", "Susanna Clarke", "978-0-765-35615-3",
+              ["mood:adventurous", "fiction", "fantasy", "alternate history", "magic"], total_copies=2),
+    make_book("The Final Empire (Mistborn)", "Brandon Sanderson", "978-0-765-31178-2",
+              ["mood:adventurous", "fiction", "fantasy", "magic system", "epic"], total_copies=3),
+    make_book("The Lies of Locke Lamora", "Scott Lynch", "978-0-553-58894-9",
+              ["mood:adventurous", "mood:bored", "fiction", "fantasy", "heist"], total_copies=2),
+]
+
+# ── "I want science fiction / future / space" ────────────────────────────────
+SCI_FI_BOOKS = [
+    make_book("The Martian", "Andy Weir", "978-0-553-41802-6",
+              ["mood:adventurous", "mood:curious", "fiction", "science fiction", "survival"], total_copies=5),
+    make_book("Project Hail Mary", "Andy Weir", "978-0-593-13520-4",
+              ["mood:adventurous", "mood:curious", "fiction", "science fiction", "space"], total_copies=4),
+    make_book("Ender's Game", "Orson Scott Card", "978-0-765-32963-0",
+              ["mood:adventurous", "fiction", "science fiction", "military", "young adult"], total_copies=3),
+    make_book("The Three-Body Problem", "Liu Cixin", "978-0-765-38260-4",
+              ["mood:curious", "fiction", "science fiction", "physics", "China"], total_copies=3),
+    make_book("Hyperion", "Dan Simmons", "978-0-553-28368-5",
+              ["mood:adventurous", "mood:curious", "fiction", "science fiction", "epic", "space"], total_copies=2),
+    make_book("Foundation", "Isaac Asimov", "978-0-553-80371-0",
+              ["mood:curious", "fiction", "science fiction", "classic", "empire"], total_copies=3),
+    make_book("Flowers for Algernon", "Daniel Keyes", "978-0-15-603008-5",
+              ["mood:sad", "mood:curious", "fiction", "science fiction", "intelligence", "classic"], total_copies=3),
+    make_book("Ready Player One", "Ernest Cline", "978-0-307-88743-6",
+              ["mood:adventurous", "mood:happy", "fiction", "science fiction", "gaming", "nostalgia"], total_copies=5),
+    make_book("The Left Hand of Darkness", "Ursula K. Le Guin", "978-0-441-47812-5",
+              ["mood:curious", "fiction", "science fiction", "gender", "literary fiction"], total_copies=2),
+    make_book("Recursion", "Blake Crouch", "978-1-524-75978-1",
+              ["mood:bored", "mood:curious", "fiction", "science fiction", "thriller", "time"], total_copies=3),
+    make_book("Dark Matter", "Blake Crouch", "978-1-101-90422-3",
+              ["mood:bored", "mood:curious", "fiction", "science fiction", "thriller", "parallel universe"], total_copies=4),
+]
+
+# ── "I want a mystery / detective / crime" ───────────────────────────────────
+MYSTERY_BOOKS = [
+    make_book("The Murder of Roger Ackroyd", "Agatha Christie", "978-0-062-07389-1",
+              ["mood:bored", "fiction", "mystery", "classic", "detective"], total_copies=3),
+    make_book("Murder on the Orient Express", "Agatha Christie", "978-0-062-07392-1",
+              ["mood:bored", "fiction", "mystery", "classic", "detective"], total_copies=4),
+    make_book("The Hound of the Baskervilles", "Arthur Conan Doyle", "978-0-140-43757-7",
+              ["mood:bored", "fiction", "mystery", "classic", "Sherlock Holmes"], total_copies=3),
+    make_book("Big Little Lies", "Liane Moriarty", "978-0-399-58767-1",
+              ["mood:bored", "fiction", "thriller", "mystery", "drama"], total_copies=4),
+    make_book("The Girl on the Train", "Paula Hawkins", "978-1-594-63480-8",
+              ["mood:bored", "fiction", "psychological thriller", "mystery"], total_copies=4),
+    make_book("In the Woods", "Tana French", "978-0-670-03862-6",
+              ["mood:bored", "fiction", "thriller", "crime", "mystery"], total_copies=3),
+    make_book("The Secret History", "Donna Tartt", "978-0-679-41032-8",
+              ["mood:bored", "mood:curious", "fiction", "literary thriller", "mystery"], total_copies=3),
+    make_book("Verity", "Colleen Hoover", "978-1-538-72468-7",
+              ["mood:bored", "fiction", "thriller", "psychological", "romance"], total_copies=4),
+    make_book("The Thursday Murder Club", "Richard Osman", "978-0-241-42557-3",
+              ["mood:happy", "mood:bored", "fiction", "mystery", "comedy", "cozy"], total_copies=4),
+]
+
+# ── "I want history / non-fiction / real events" ─────────────────────────────
+HISTORY_BOOKS = [
+    make_book("Guns, Germs, and Steel", "Jared Diamond", "978-0-393-31755-8",
+              ["mood:curious", "non-fiction", "history", "anthropology", "science"], total_copies=3),
+    make_book("The Silk Roads", "Peter Frankopan", "978-1-101-94344-4",
+              ["mood:curious", "non-fiction", "history", "global history", "trade"], total_copies=3),
+    make_book("Homo Deus", "Yuval Noah Harari", "978-0-062-46465-8",
+              ["mood:curious", "non-fiction", "history", "future", "technology"], total_copies=3),
+    make_book("The Diary of a Young Girl", "Anne Frank", "978-0-553-29698-3",
+              ["mood:sad", "mood:curious", "biography", "memoir", "world war ii", "historical"], total_copies=4),
+    make_book("Night", "Elie Wiesel", "978-0-374-50001-6",
+              ["mood:sad", "biography", "memoir", "holocaust", "historical"], total_copies=3),
+    make_book("The Immortal Life of Henrietta Lacks", "Rebecca Skloot", "978-1-400-05218-9",
+              ["mood:curious", "non-fiction", "science", "ethics", "history"], total_copies=3),
+    make_book("Educated", "Tara Westover", "978-0-399-59050-4",
+              ["mood:curious", "mood:motivated", "biography", "memoir", "coming of age"], total_copies=3),
+    make_book("Born a Crime", "Trevor Noah", "978-0-399-58805-0",
+              ["mood:happy", "mood:curious", "biography", "memoir", "South Africa", "humour"], total_copies=4),
+    make_book("The Wright Brothers", "David McCullough", "978-1-476-72883-7",
+              ["mood:curious", "mood:motivated", "biography", "history", "aviation"], total_copies=2),
+    make_book("Alexander Hamilton", "Ron Chernow", "978-0-143-03475-9",
+              ["mood:curious", "biography", "history", "American history"], total_copies=2),
+]
+
+# ── "I want philosophy / meaning / deep thinking" ────────────────────────────
+PHILOSOPHY_BOOKS = [
+    make_book("Sophie's World", "Jostein Gaarder", "978-0-374-53087-7",
+              ["mood:curious", "fiction", "philosophy", "history of philosophy", "young adult"], total_copies=3),
+    make_book("The Republic", "Plato", "978-0-872-20316-4",
+              ["mood:curious", "philosophy", "classic", "political philosophy"], total_copies=2),
+    make_book("Beyond Good and Evil", "Friedrich Nietzsche", "978-0-679-72465-5",
+              ["mood:curious", "philosophy", "classic", "ethics", "existentialism"], total_copies=2),
+    make_book("Being and Nothingness", "Jean-Paul Sartre", "978-0-671-82725-2",
+              ["mood:curious", "philosophy", "existentialism", "classic"], total_copies=2),
+    make_book("The Stranger", "Albert Camus", "978-0-679-72020-1",
+              ["mood:sad", "mood:curious", "fiction", "existentialism", "classic", "absurdism"], total_copies=3),
+    make_book("Crime and Punishment", "Fyodor Dostoevsky", "978-0-140-44913-6",
+              ["mood:sad", "mood:curious", "fiction", "classic", "psychological", "Russian literature"], total_copies=2),
+    make_book("The Brothers Karamazov", "Fyodor Dostoevsky", "978-0-374-52837-7",
+              ["mood:curious", "fiction", "classic", "philosophy", "Russian literature"], total_copies=2),
+    make_book("When Nietzsche Wept", "Irvin D. Yalom", "978-0-061-09699-1",
+              ["mood:curious", "fiction", "philosophy", "psychology", "historical fiction"], total_copies=2),
+    make_book("The Courage to Be Disliked", "Ichiro Kishimi", "978-1-501-15713-2",
+              ["mood:motivated", "mood:stressed", "self-help", "philosophy", "Adlerian psychology"], total_copies=4),
+    make_book("Man's Search for Meaning", "Viktor Frankl", "978-0-807-01427-1",
+              ["mood:motivated", "mood:sad", "biography", "memoir", "philosophy", "psychology"], total_copies=4),
+]
+
+# ── "I want something funny / comedy" ────────────────────────────────────────
+COMEDY_BOOKS = [
+    make_book("Yes Please", "Amy Poehler", "978-0-062-69386-6",
+              ["mood:happy", "biography", "memoir", "comedy", "feminism"], total_copies=3),
+    make_book("Bossypants", "Tina Fey", "978-0-316-05686-8",
+              ["mood:happy", "biography", "memoir", "comedy", "feminism"], total_copies=3),
+    make_book("Is Everyone Hanging Out Without Me?", "Mindy Kaling", "978-0-307-88691-0",
+              ["mood:happy", "biography", "memoir", "comedy", "pop culture"], total_copies=3),
+    make_book("The Naked Ape", "Desmond Morris", "978-0-385-33430-3",
+              ["mood:curious", "non-fiction", "anthropology", "human behaviour", "science"], total_copies=2),
+    make_book("Bill Bryson: A Short History of Nearly Everything", "Bill Bryson", "978-0-767-90818-7",
+              ["mood:happy", "mood:curious", "non-fiction", "science", "history", "humour"], total_copies=3),
+    make_book("Notes from a Small Island", "Bill Bryson", "978-0-552-99600-0",
+              ["mood:happy", "biography", "memoir", "travel", "humour"], total_copies=3),
+    make_book("The Inimitable Jeeves", "P. G. Wodehouse", "978-0-140-01685-2",
+              ["mood:happy", "fiction", "classic", "comedy", "british"], total_copies=2),
+    make_book("Good Talk: A Memoir in Conversations", "Mira Jacob", "978-1-250-29647-0",
+              ["mood:happy", "biography", "memoir", "graphic memoir", "identity"], total_copies=2),
+]
+
+# ── "I want self-improvement / career / productivity" ─────────────────────────
+PRODUCTIVITY_BOOKS = [
+    make_book("Getting Things Done", "David Allen", "978-0-143-12640-0",
+              ["mood:motivated", "self-help", "productivity", "time management", "GTD"], total_copies=3),
+    make_book("The One Thing", "Gary Keller", "978-1-885-16711-8",
+              ["mood:motivated", "self-help", "productivity", "focus", "success"], total_copies=3),
+    make_book("Digital Minimalism", "Cal Newport", "978-0-525-53657-4",
+              ["mood:motivated", "mood:stressed", "self-help", "technology", "focus"], total_copies=3),
+    make_book("So Good They Can't Ignore You", "Cal Newport", "978-1-455-50912-8",
+              ["mood:motivated", "self-help", "career", "mastery", "passion"], total_copies=3),
+    make_book("Make It Stick", "Peter Brown", "978-0-674-72901-8",
+              ["mood:motivated", "mood:curious", "non-fiction", "learning", "memory", "education"], total_copies=3),
+    make_book("Eat That Frog!", "Brian Tracy", "978-1-626-56941-3",
+              ["mood:motivated", "self-help", "productivity", "procrastination"], total_copies=3),
+    make_book("Range: Why Generalists Triumph in a Specialized World", "David Epstein", "978-0-735-21404-4",
+              ["mood:curious", "mood:motivated", "non-fiction", "psychology", "career", "skills"], total_copies=3),
+    make_book("Principles", "Ray Dalio", "978-1-501-12408-2",
+              ["mood:motivated", "self-help", "leadership", "business", "decision making"], total_copies=3),
+    make_book("Ultralearning", "Scott Young", "978-0-062-88268-3",
+              ["mood:motivated", "self-help", "learning", "skill acquisition", "education"], total_copies=3),
+]
+
+# ── "I want romance / love / relationships" ───────────────────────────────────
+ROMANCE_CHAT_BOOKS = [
+    make_book("Love in the Time of Cholera", "Gabriel Garcia Marquez", "978-0-307-38973-5",
+              ["mood:romantic", "fiction", "literary fiction", "love story", "magical realism"], total_copies=2),
+    make_book("Anna Karenina", "Leo Tolstoy", "978-0-143-10430-9",
+              ["mood:romantic", "mood:sad", "fiction", "classic", "Russian literature", "tragedy"], total_copies=2),
+    make_book("Pride and Prejudice", "Jane Austen", "978-0-14-143951-8",
+              ["mood:romantic", "romance", "classic", "regency", "fiction"], total_copies=3),
+    make_book("Sense and Sensibility", "Jane Austen", "978-0-14-143966-2",
+              ["mood:romantic", "romance", "classic", "regency", "fiction"], total_copies=3),
+    make_book("Outlander", "Diana Gabaldon", "978-0-440-21256-1",
+              ["mood:romantic", "romance", "historical fiction", "adventure", "time travel"], total_copies=2),
+    make_book("The Hating Game", "Sally Thorne", "978-0-062-67029-3",
+              ["mood:romantic", "romance", "contemporary", "office romance", "comedy"], total_copies=3),
+    make_book("Book Lovers", "Emily Henry", "978-0-593-33499-7",
+              ["mood:romantic", "mood:happy", "romance", "contemporary", "books about books"], total_copies=4),
+    make_book("It Ends with Us", "Colleen Hoover", "978-1-501-16054-9",
+              ["mood:romantic", "mood:sad", "romance", "contemporary", "drama"], total_copies=4),
+    make_book("Ugly Love", "Colleen Hoover", "978-1-476-75482-1",
+              ["mood:romantic", "romance", "contemporary", "drama", "new adult"], total_copies=3),
+]
+
+# ── "I want horror / dark / creepy" ───────────────────────────────────────────
+HORROR_CHAT_BOOKS = [
+    make_book("The Stand", "Stephen King", "978-0-307-74365-9",
+              ["mood:bored", "fiction", "horror", "post-apocalyptic", "epic"], total_copies=2),
+    make_book("Misery", "Stephen King", "978-1-501-16646-6",
+              ["mood:bored", "fiction", "horror", "psychological", "thriller"], total_copies=3),
+    make_book("The Silence of the Lambs", "Thomas Harris", "978-0-312-92458-1",
+              ["mood:bored", "fiction", "thriller", "psychological", "crime"], total_copies=3),
+    make_book("Rebecca", "Daphne du Maurier", "978-0-380-73040-9",
+              ["mood:bored", "mood:romantic", "fiction", "gothic", "psychological thriller"], total_copies=3),
+    make_book("Mexican Gothic", "Silvia Moreno-Garcia", "978-0-525-62069-1",
+              ["mood:bored", "fiction", "horror", "gothic", "historical fiction"], total_copies=3),
+    make_book("Piranesi", "Susanna Clarke", "978-1-635-57535-2",
+              ["mood:bored", "mood:curious", "fiction", "fantasy", "mystery", "surreal"], total_copies=3),
+    make_book("The Haunting of Hill House", "Shirley Jackson", "978-0-14-303998-7",
+              ["mood:bored", "fiction", "horror", "psychological", "gothic", "classic"], total_copies=2),
+    make_book("Mexican Gothic", "Silvia Moreno-Garcia", "978-0-525-62070-7",
+              ["mood:bored", "fiction", "horror", "gothic", "dark"], total_copies=2),
+]
+
+# ── "I want sports / fitness / health" ────────────────────────────────────────
+SPORTS_BOOKS = [
+    make_book("Born to Run", "Christopher McDougall", "978-0-307-27990-0",
+              ["mood:adventurous", "mood:motivated", "non-fiction", "running", "fitness"], total_copies=3),
+    make_book("Shoe Dog", "Phil Knight", "978-1-476-71808-1",
+              ["mood:motivated", "biography", "memoir", "entrepreneurship", "Nike"], total_copies=4),
+    make_book("The Champion's Mind", "Jim Afremow", "978-1-623-36356-0",
+              ["mood:motivated", "self-help", "sports psychology", "mental performance"], total_copies=3),
+    make_book("Endure: Mind, Body, and the Curiously Elastic Limits of Human Performance", "Alex Hutchinson", "978-0-062-65992-9",
+              ["mood:motivated", "mood:adventurous", "non-fiction", "sports science", "endurance"], total_copies=2),
+    make_book("The Obstacle Is the Way", "Ryan Holiday", "978-1-591-84660-8",
+              ["mood:motivated", "mood:stressed", "self-help", "stoicism", "resilience"], total_copies=4),
+    make_book("Finding Ultra", "Rich Roll", "978-0-307-95267-9",
+              ["mood:motivated", "mood:adventurous", "biography", "memoir", "triathlon", "plant-based"], total_copies=2),
+    make_book("Open: An Autobiography", "Andre Agassi", "978-0-307-38818-9",
+              ["mood:motivated", "biography", "memoir", "tennis", "sport"], total_copies=3),
+]
+
+# ── "I want technology / coding / computer science" ────────────────────────────
+TECH_BOOKS = [
+    make_book("The Pragmatic Programmer", "David Thomas", "978-0-135-95705-9",
+              ["mood:motivated", "non-fiction", "programming", "software engineering", "career"], total_copies=3),
+    make_book("Clean Code", "Robert C. Martin", "978-0-132-35088-4",
+              ["mood:motivated", "non-fiction", "programming", "software engineering", "best practices"], total_copies=3),
+    make_book("The Mythical Man-Month", "Frederick P. Brooks Jr.", "978-0-201-83595-3",
+              ["mood:curious", "non-fiction", "software engineering", "management", "classic"], total_copies=2),
+    make_book("Code: The Hidden Language of Computer Hardware and Software", "Charles Petzold", "978-0-735-61103-4",
+              ["mood:curious", "non-fiction", "computer science", "technology", "education"], total_copies=3),
+    make_book("The Innovators", "Walter Isaacson", "978-1-476-70869-3",
+              ["mood:curious", "biography", "technology", "history", "computing"], total_copies=2),
+    make_book("Zero to One", "Peter Thiel", "978-0-804-13930-3",
+              ["mood:motivated", "self-help", "entrepreneurship", "startups", "technology"], total_copies=3),
+    make_book("The Phoenix Project", "Gene Kim", "978-1-942-78807-7",
+              ["mood:motivated", "mood:curious", "fiction", "technology", "DevOps", "business"], total_copies=3),
+    make_book("Superintelligence", "Nick Bostrom", "978-0-199-67811-2",
+              ["mood:curious", "non-fiction", "AI", "philosophy", "future"], total_copies=2),
+    make_book("Life 3.0", "Max Tegmark", "978-1-101-94659-9",
+              ["mood:curious", "non-fiction", "AI", "future", "science"], total_copies=2),
+]
+
+# ── "I want travel / culture / world" ─────────────────────────────────────────
+TRAVEL_BOOKS = [
+    make_book("In Patagonia", "Bruce Chatwin", "978-0-14-011291-2",
+              ["mood:adventurous", "biography", "travel", "South America", "adventure"], total_copies=2),
+    make_book("Eat, Pray, Love", "Elizabeth Gilbert", "978-0-143-03841-2",
+              ["mood:adventurous", "mood:motivated", "biography", "memoir", "travel", "self-discovery"], total_copies=4),
+    make_book("The Motorcycle Diaries", "Ernesto Che Guevara", "978-1-920-88823-5",
+              ["mood:adventurous", "biography", "memoir", "travel", "South America"], total_copies=2),
+    make_book("The Beach", "Alex Garland", "978-0-140-27393-5",
+              ["mood:adventurous", "fiction", "thriller", "travel", "backpacking"], total_copies=3),
+    make_book("Shantaram", "Gregory David Roberts", "978-0-312-33052-3",
+              ["mood:adventurous", "fiction", "memoir", "India", "crime"], total_copies=2),
+    make_book("A Year in Provence", "Peter Mayle", "978-0-679-73114-9",
+              ["mood:happy", "biography", "memoir", "travel", "France"], total_copies=2),
+    make_book("The Alchemist", "Paulo Coelho", "978-0-06-112241-5",
+              ["mood:adventurous", "mood:motivated", "fiction", "philosophical fiction", "travel"], total_copies=4),
+]
+
+# ── "I want young adult / teen / coming of age" ───────────────────────────────
+YA_BOOKS = [
+    make_book("The Hunger Games", "Suzanne Collins", "978-0-439-02352-8",
+              ["mood:adventurous", "mood:bored", "fiction", "young adult", "dystopia", "action"], total_copies=5),
+    make_book("Divergent", "Veronica Roth", "978-0-062-02402-5",
+              ["mood:adventurous", "fiction", "young adult", "dystopia", "action"], total_copies=4),
+    make_book("The Giver", "Lois Lowry", "978-0-544-33615-0",
+              ["mood:curious", "mood:sad", "fiction", "young adult", "dystopia", "classic"], total_copies=4),
+    make_book("Wonder", "R. J. Palacio", "978-0-375-86902-0",
+              ["mood:sad", "mood:motivated", "fiction", "young adult", "disability", "kindness"], total_copies=5),
+    make_book("The Outsiders", "S. E. Hinton", "978-0-141-31239-6",
+              ["mood:sad", "fiction", "young adult", "classic", "gang", "coming of age"], total_copies=3),
+    make_book("Speak", "Laurie Halse Anderson", "978-0-312-67439-1",
+              ["mood:sad", "fiction", "young adult", "trauma", "mental health"], total_copies=3),
+    make_book("The House on Mango Street", "Sandra Cisneros", "978-0-679-73477-5",
+              ["mood:sad", "mood:curious", "fiction", "young adult", "identity", "Chicana"], total_copies=3),
+    make_book("To Kill a Mockingbird", "Harper Lee", "978-0-06-112008-4",
+              ["mood:curious", "mood:sad", "fiction", "classic", "social justice", "coming of age"], total_copies=4),
+    make_book("The Catcher in the Rye", "J. D. Salinger", "978-0-316-76948-0",
+              ["mood:sad", "mood:lonely", "fiction", "classic", "young adult", "coming of age"], total_copies=3),
+    make_book("Paper Towns", "John Green", "978-0-525-47818-8",
+              ["mood:adventurous", "mood:romantic", "fiction", "young adult", "mystery", "road trip"], total_copies=3),
+]
+
+# ── "I want poetry / literary / art" ─────────────────────────────────────────
+LITERARY_BOOKS = [
+    make_book("Milk and Honey", "Rupi Kaur", "978-1-449-47171-1",
+              ["mood:sad", "mood:motivated", "poetry", "feminism", "healing"], total_copies=4),
+    make_book("The Sun and Her Flowers", "Rupi Kaur", "978-1-449-48623-4",
+              ["mood:sad", "mood:motivated", "poetry", "feminism", "nature"], total_copies=3),
+    make_book("Leaves of Grass", "Walt Whitman", "978-0-199-55345-9",
+              ["mood:happy", "mood:curious", "poetry", "American literature", "classic"], total_copies=2),
+    make_book("Invisible Man", "Ralph Ellison", "978-0-679-73276-4",
+              ["mood:curious", "fiction", "classic", "African American literature", "identity"], total_copies=2),
+    make_book("The Great Gatsby", "F. Scott Fitzgerald", "978-0-743-27356-5",
+              ["mood:sad", "mood:curious", "fiction", "classic", "American literature", "Jazz Age"], total_copies=3),
+    make_book("Lolita", "Vladimir Nabokov", "978-0-679-72020-1",
+              ["mood:curious", "fiction", "classic", "literary fiction", "controversial"], total_copies=2),
+    make_book("The Sound and the Fury", "William Faulkner", "978-0-679-73224-5",
+              ["mood:curious", "fiction", "classic", "American literature", "stream of consciousness"], total_copies=2),
+    make_book("Their Eyes Were Watching God", "Zora Neale Hurston", "978-0-061-96096-9",
+              ["mood:motivated", "mood:curious", "fiction", "classic", "African American literature"], total_copies=2),
+]
+
+# ── "I want business / finance / economics" ───────────────────────────────────
+BUSINESS_BOOKS = [
+    make_book("Good to Great", "Jim Collins", "978-0-066-62099-8",
+              ["mood:motivated", "non-fiction", "business", "management", "leadership"], total_copies=3),
+    make_book("The Innovator's Dilemma", "Clayton M. Christensen", "978-1-422-19602-3",
+              ["mood:curious", "mood:motivated", "non-fiction", "business", "innovation", "disruption"], total_copies=2),
+    make_book("Thinking in Systems", "Donella Meadows", "978-1-603-58055-7",
+              ["mood:curious", "non-fiction", "systems thinking", "environment", "education"], total_copies=3),
+    make_book("The Psychology of Money", "Morgan Housel", "978-0-857-19780-0",
+              ["mood:curious", "mood:motivated", "non-fiction", "personal finance", "psychology"], total_copies=4),
+    make_book("Nudge", "Richard Thaler", "978-0-143-11526-7",
+              ["mood:curious", "non-fiction", "behavioural economics", "psychology", "policy"], total_copies=2),
+    make_book("Bad Blood", "John Carreyrou", "978-1-524-73165-6",
+              ["mood:bored", "mood:curious", "non-fiction", "business", "fraud", "Silicon Valley"], total_copies=3),
+    make_book("Shoe Dog", "Phil Knight", "978-1-476-71808-1",
+              ["mood:motivated", "biography", "entrepreneurship", "Nike", "memoir"], total_copies=4),
+    make_book("Barbarians at the Gate", "Bryan Burrough", "978-0-061-09692-2",
+              ["mood:bored", "mood:curious", "non-fiction", "business", "finance", "LBO"], total_copies=2),
+]
+
+# ── "I want spiritual / religious / mindful" ──────────────────────────────────
+SPIRITUAL_BOOKS = [
+    make_book("The Prophet", "Kahlil Gibran", "978-0-394-40428-5",
+              ["mood:motivated", "mood:sad", "poetry", "philosophy", "spirituality", "classic"], total_copies=3),
+    make_book("Siddhartha", "Hermann Hesse", "978-0-553-20884-7",
+              ["mood:motivated", "mood:curious", "fiction", "philosophy", "Buddhism", "classic"], total_copies=3),
+    make_book("The Road", "Cormac McCarthy", "978-0-307-38789-2",
+              ["mood:sad", "mood:adventurous", "fiction", "post-apocalyptic", "literary fiction"], total_copies=3),
+    make_book("A New Earth", "Eckhart Tolle", "978-0-452-28996-3",
+              ["mood:stressed", "mood:motivated", "self-help", "spirituality", "mindfulness"], total_copies=3),
+    make_book("The Celestine Prophecy", "James Redfield", "978-0-446-67100-7",
+              ["mood:adventurous", "mood:curious", "fiction", "spirituality", "adventure"], total_copies=2),
+    make_book("The Four Agreements", "Don Miguel Ruiz", "978-1-878-43414-5",
+              ["mood:motivated", "mood:stressed", "self-help", "spirituality", "Toltec wisdom"], total_copies=4),
+    make_book("Way of the Peaceful Warrior", "Dan Millman", "978-1-932-07301-9",
+              ["mood:motivated", "mood:adventurous", "fiction", "spirituality", "self-improvement"], total_copies=3),
+]
+
+CHATBOT_SUGGESTED_BOOKS = (
+    LONELY_BOOKS + ANXIOUS_BOOKS + JOYFUL_BOOKS + LIFE_CHANGING_BOOKS +
+    FANTASY_BOOKS + SCI_FI_BOOKS + MYSTERY_BOOKS + HISTORY_BOOKS +
+    PHILOSOPHY_BOOKS + COMEDY_BOOKS + PRODUCTIVITY_BOOKS + ROMANCE_CHAT_BOOKS +
+    HORROR_CHAT_BOOKS + SPORTS_BOOKS + TECH_BOOKS + TRAVEL_BOOKS +
+    YA_BOOKS + LITERARY_BOOKS + BUSINESS_BOOKS + SPIRITUAL_BOOKS
+)
+
+MOOD_BOOKS = (
+    SAD_BOOKS + HAPPY_BOOKS + STRESSED_BOOKS + ADVENTUROUS_BOOKS +
+    MOTIVATED_BOOKS + CURIOUS_BOOKS + ROMANTIC_MOOD_BOOKS + THRILLING_BOOKS
+)
+
 SAMPLE_BOOKS = (
     ML_BOOKS + DATA_SCIENCE_BOOKS + ALGORITHM_BOOKS + PYTHON_BOOKS +
     NLP_BOOKS + DATABASE_BOOKS + NETWORKING_BOOKS + MATHEMATICS_BOOKS +
     CLOUD_BOOKS + FICTION_BOOKS + HORROR_BOOKS + ROMANCE_BOOKS +
-    GRAPHIC_NOVEL_BOOKS + BIOGRAPHY_BOOKS + MOOD_BOOKS
+    GRAPHIC_NOVEL_BOOKS + BIOGRAPHY_BOOKS + MOOD_BOOKS + CHATBOT_SUGGESTED_BOOKS
 )
 
 

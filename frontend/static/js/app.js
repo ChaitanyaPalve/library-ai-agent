@@ -226,8 +226,16 @@ async function doSearch() {
       attachReserveListeners(booksGrid);
       attachTagListeners(booksGrid);
     } else {
+      // Show empty state with AI suggest message using the searched query
       emptyState.classList.remove("hidden");
       setQuoteEl("emptyQuote");
+      const aiSuggestMsg = $("emptyAiSuggestMsg");
+      if (aiSuggestMsg) {
+        aiSuggestMsg.innerHTML = `🤖 <strong>WatsonX AI suggests:</strong> "${esc(query)}" wasn't found in our catalogue. Would you like to suggest it for acquisition?`;
+        aiSuggestMsg.classList.remove("hidden");
+        // Store last searched query so suggest button can pre-fill it
+        aiSuggestMsg.dataset.query = query;
+      }
     }
 
   } catch {
@@ -300,6 +308,11 @@ function renderPinCard(book, index) {
   const copiesText = `${book.total_copies || 1} cop${(book.total_copies || 1) === 1 ? "y" : "ies"} total`;
   const quickInfo  = `<div class="pin-card__quick-info">${isbnText ? isbnText + " · " : ""}${copiesText}</div>`;
 
+  // Specialty badge (genre/subject shown always at bottom-right of image)
+  const specialtyLabel = primaryTag || (book.genre) || null;
+  const specialtyBadge = specialtyLabel
+    ? `<div class="pin-card__specialty-badge">${esc(specialtyLabel)}</div>` : "";
+
   // Book cover: coloured block with title + author overlaid
   const thumbCover = `
     <div class="pin-card__cover-title">${esc(book.title)}</div>
@@ -334,6 +347,7 @@ function renderPinCard(book, index) {
                 aria-label="Read &amp; write reviews">
           Reviews
         </button>
+        ${specialtyBadge}
       </div>
     </article>`;
 }
@@ -834,7 +848,7 @@ setQuoteEl("recsEmptyQuote");
 // =============================================================================
 // SUGGEST A BOOK BAR  — standalone button in clear space
 // =============================================================================
-function openSuggestTab() {
+function openSuggestTab(prefillTitle = "") {
   // Open chatbot panel on Suggest Book tab
   const panel = $("chatbotPanel");
   panel.classList.remove("hidden");
@@ -850,13 +864,25 @@ function openSuggestTab() {
   }
   $("chatbotSuggestForm").classList.remove("hidden");
   $("chatbotInputRow").classList.add("hidden");
+  // Pre-fill title if provided (e.g. from a failed search)
+  if (prefillTitle) {
+    const titleInput = $("suggestTitle");
+    if (titleInput) titleInput.value = prefillTitle;
+  }
 }
 
 const suggestBookBarBtn = $("suggestBookBarBtn");
-if (suggestBookBarBtn) suggestBookBarBtn.addEventListener("click", openSuggestTab);
+if (suggestBookBarBtn) suggestBookBarBtn.addEventListener("click", () => openSuggestTab());
 
 const emptyStateSuggestBtn = $("emptyStateSuggestBtn");
-if (emptyStateSuggestBtn) emptyStateSuggestBtn.addEventListener("click", openSuggestTab);
+if (emptyStateSuggestBtn) {
+  emptyStateSuggestBtn.addEventListener("click", () => {
+    // Pre-fill with the last searched query if available
+    const aiSuggestMsg = $("emptyAiSuggestMsg");
+    const prefill = aiSuggestMsg ? (aiSuggestMsg.dataset.query || "") : "";
+    openSuggestTab(prefill);
+  });
+}
 
 function hideResults() {
   nluInsights.classList.add("hidden");
@@ -865,6 +891,12 @@ function hideResults() {
   emptyState.classList.add("hidden");
   loadingState.classList.add("hidden");
   homeBooksSection.classList.remove("hidden");
+  // Reset AI suggest message between searches
+  const aiSuggestMsg = $("emptyAiSuggestMsg");
+  if (aiSuggestMsg) {
+    aiSuggestMsg.classList.add("hidden");
+    delete aiSuggestMsg.dataset.query;
+  }
 }
 
 function setLoading(on) {

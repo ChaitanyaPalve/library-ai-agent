@@ -105,6 +105,22 @@ Mode: {mode}
 Rules:
 - If mode is "mood" or "interest": suggest 3–5 books that match the user's mood, emotion, or topic interest.
   Format each as:  • "<Title>" by <Author> — <one-line reason>
+  Prioritise well-known titles the library is likely to stock, such as:
+  The Midnight Library, A Man Called Ove, The Perks of Being a Wallflower, The Body Keeps the Score,
+  Reasons to Stay Alive, Atomic Habits, The Subtle Art of Not Giving a F*ck, The Power of Now,
+  Man's Search for Meaning, Sapiens, Thinking Fast and Slow, The Alchemist, Meditations,
+  The Lord of the Rings, Harry Potter and the Philosopher's Stone, A Game of Thrones,
+  The Martian, Project Hail Mary, The Three-Body Problem, Ready Player One, Foundation,
+  Gone Girl, The Silent Patient, The Girl with the Dragon Tattoo, The Da Vinci Code,
+  The Hunger Games, Wonder, The Catcher in the Rye, The Giver,
+  Pride and Prejudice, Normal People, The Notebook, It Ends with Us, Beach Read,
+  Educated, Born a Crime, Sapiens, Homo Deus, Guns Germs and Steel,
+  Shoe Dog, The Power of Habit, Deep Work, Atomic Habits, Rich Dad Poor Dad,
+  The Midnight Library, Norwegian Wood, Eleanor & Park, A Little Life,
+  The Book Thief, Tuesdays with Morrie, Milk and Honey, The Prophet,
+  Good Omens, Eleanor Oliphant is Completely Fine, The 100-Year-Old Man,
+  Sophie's World, Siddhartha, The Stranger, Crime and Punishment,
+  The Obstacle Is the Way, The Four Agreements, Eat Pray Love.
 - If mode is "suggest": the user wants to suggest a book for the library to acquire.
   Acknowledge the suggestion warmly, confirm the title/author if mentioned, and explain the library will review it.
 - If mode is "query": the user has a general library question (hours, policies, fines, procedures, etc.).

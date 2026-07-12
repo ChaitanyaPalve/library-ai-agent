@@ -612,6 +612,31 @@ body {
   border: 1px solid var(--color-hairline);
 }
 
+/* Specialty / genre badge — always-visible at bottom-right of footer */
+.pin-card__specialty-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--rounded-full);
+  border: 1px solid var(--color-primary-border);
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: auto;
+}
+[data-theme="dark"] .pin-card__specialty-badge {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.30);
+}
+
 /* Availability + action row */
 .pin-card__footer {
   padding: var(--space-xs) var(--space-md) var(--space-md);
@@ -685,6 +710,26 @@ body {
   font-size: 14px;
   font-weight: 400;
   color: var(--color-mute);
+}
+
+/* AI suggest message in empty state */
+.empty-ai-suggest {
+  max-width: 420px;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--rounded-md);
+  font-size: 13px;
+  color: var(--color-body);
+  line-height: 1.55;
+  text-align: center;
+}
+.empty-ai-suggest strong {
+  color: var(--color-primary);
+}
+[data-theme="dark"] .empty-ai-suggest {
+  background: rgba(59, 130, 246, 0.10);
+  border-color: rgba(59, 130, 246, 0.25);
 }
 
 /* Spinner — ring + book icon */
