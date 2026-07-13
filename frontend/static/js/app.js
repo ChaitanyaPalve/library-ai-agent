@@ -254,6 +254,16 @@ async function doSearch() {
 // ─────────────────────────────────────────────────────────────────────────────
 let _homeBooksGenreLoaded = "";
 
+let _autoSeedDone = false;
+
+async function _autoSeedIfEmpty() {
+  if (_autoSeedDone) return;
+  _autoSeedDone = true;
+  try {
+    await fetch("/api/admin/seed-books", { method: "POST" });
+  } catch { /* silent — best effort */ }
+}
+
 async function loadHomeBooks(genre = "all", force = false) {
   if (!force && _homeBooksGenreLoaded === genre) return;
 
@@ -281,6 +291,16 @@ async function loadHomeBooks(genre = "all", force = false) {
     }
     const res  = await fetch(url);
     const data = await res.json();
+
+    // If catalogue is empty, seed it once then reload
+    if (!data.total && genre === "all" && !_autoSeedDone) {
+      await _autoSeedIfEmpty();
+      homeBooksLoading.classList.add("hidden");
+      _homeBooksGenreLoaded = "";   // allow retry
+      loadHomeBooks("all", true);
+      return;
+    }
+
     homeBooksLoading.classList.add("hidden");
 
     homeBooksCount.textContent = `${data.total} book${data.total !== 1 ? "s" : ""}`;

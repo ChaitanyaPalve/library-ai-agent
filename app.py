@@ -43,6 +43,27 @@ def create_app() -> Flask:
     except Exception as exc:
         logger.warning("Could not ensure DB indexes: %s", exc)
 
+    # ── Auto-seed on startup when catalogue is empty ─────────────────────────
+    # If the books collection has no documents, insert the full SAMPLE_BOOKS
+    # catalogue so all genre chips have books without any manual step.
+    try:
+        from backend.models.db import get_db
+        from scripts.seed_db import SAMPLE_BOOKS
+        _db = get_db()
+        if _db.books.count_documents({}) == 0:
+            inserted = 0
+            for book in SAMPLE_BOOKS:
+                try:
+                    _db.books.insert_one(book)
+                    inserted += 1
+                except Exception:
+                    pass
+            logger.info("[startup] Auto-seeded catalogue: %d books inserted.", inserted)
+        else:
+            logger.info("[startup] Catalogue already populated, skipping auto-seed.")
+    except Exception as exc:
+        logger.warning("Could not auto-seed books on startup: %s", exc)
+
     # ── Restore book availability on every startup ────────────────────────────
     # Resets available_copies = total_copies so books never appear permanently
     # "Unavailable" after testing or after a server restart.
