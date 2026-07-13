@@ -34,12 +34,16 @@ if (isConfigured) {
         body: JSON.stringify({ student_id: sid, firebase_uid: user.uid, email: user.email || "" }),
       }).catch(() => {});
     } else {
-      // No Firebase session — fall back to demo/local account stored in sessionStorage.
-      // This handles the case where the user logged in with a demo or locally-registered
-      // account (which skips Firebase sign-in) even when Firebase is configured.
-      const demoUser = sessionStorage.getItem("demoUser");
-      const sid      = sessionStorage.getItem("studentId");
+      // No Firebase session — fall back to demo/local account stored in sessionStorage
+      // OR localStorage (fallback for new tabs where sessionStorage wasn't copied).
+      const demoUser = sessionStorage.getItem("demoUser") || localStorage.getItem("libDemoUser");
+      const sid      = sessionStorage.getItem("studentId") || localStorage.getItem("libStudentId");
       if (demoUser && sid) {
+        // Restore sessionStorage from localStorage if needed (new tab scenario)
+        if (!sessionStorage.getItem("studentId")) {
+          sessionStorage.setItem("studentId", sid);
+          sessionStorage.setItem("demoUser", "1");
+        }
         window._onAuthSignIn?.({ email: sid + "@demo", displayName: sid, uid: "demo" });
         // Persist demo student record — best-effort (firebase_uid defaults to "demo")
         fetch("/api/students", {
@@ -55,20 +59,29 @@ if (isConfigured) {
 
   window._firebaseSignOut = () => {
     sessionStorage.clear();
+    localStorage.removeItem("libStudentId");
+    localStorage.removeItem("libDemoUser");
     signOut(auth).then(() => window.location.replace("/login"));
   };
 
 } else {
-  // Demo mode — check sessionStorage
-  const demoUser = sessionStorage.getItem("demoUser");
-  const sid      = sessionStorage.getItem("studentId");
+  // Demo mode — check sessionStorage with localStorage fallback
+  const demoUser = sessionStorage.getItem("demoUser") || localStorage.getItem("libDemoUser");
+  const sid      = sessionStorage.getItem("studentId") || localStorage.getItem("libStudentId");
   if (!demoUser || !sid) {
     window.location.replace("/login");
   } else {
+    // Restore sessionStorage from localStorage if needed (new tab scenario)
+    if (!sessionStorage.getItem("studentId")) {
+      sessionStorage.setItem("studentId", sid);
+      sessionStorage.setItem("demoUser", "1");
+    }
     window._onAuthSignIn?.({ email: sid + "@demo", displayName: sid, uid: "demo" });
   }
   window._firebaseSignOut = () => {
     sessionStorage.clear();
+    localStorage.removeItem("libStudentId");
+    localStorage.removeItem("libDemoUser");
     window.location.replace("/login");
   };
 }
