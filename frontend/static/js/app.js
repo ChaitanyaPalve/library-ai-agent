@@ -254,11 +254,13 @@ async function doSearch() {
 // ─────────────────────────────────────────────────────────────────────────────
 let _homeBooksGenreLoaded = "";
 
-let _autoSeedDone = false;
+// Tracks whether a seed/refresh has already been triggered this session
+// so we don't loop infinitely if a genre genuinely has 0 books after refresh.
+let _seedRefreshDone = false;
 
-async function _autoSeedIfEmpty() {
-  if (_autoSeedDone) return;
-  _autoSeedDone = true;
+async function _refreshCatalogue() {
+  if (_seedRefreshDone) return;
+  _seedRefreshDone = true;
   try {
     await fetch("/api/admin/seed-books", { method: "POST" });
   } catch { /* silent — best effort */ }
@@ -281,8 +283,7 @@ async function loadHomeBooks(genre = "all", force = false) {
   try {
     let url;
     if (genre && genre.startsWith("mood:")) {
-      // Mood chips → dedicated mood endpoint
-      const moodName = genre.slice(5); // strip "mood:" prefix
+      const moodName = genre.slice(5);
       url = `/api/mood-books/${encodeURIComponent(moodName)}`;
     } else if (genre && genre !== "all") {
       url = `/api/books?subject=${encodeURIComponent(genre)}&limit=200`;
@@ -292,12 +293,13 @@ async function loadHomeBooks(genre = "all", force = false) {
     const res  = await fetch(url);
     const data = await res.json();
 
-    // If catalogue is empty, seed it once then reload
-    if (!data.total && genre === "all" && !_autoSeedDone) {
-      await _autoSeedIfEmpty();
+    // If this genre returned 0 books, trigger a catalogue refresh once
+    // (fixes stale subject_tags on existing books) then reload.
+    if (!data.total && !_seedRefreshDone) {
+      await _refreshCatalogue();
       homeBooksLoading.classList.add("hidden");
-      _homeBooksGenreLoaded = "";   // allow retry
-      loadHomeBooks("all", true);
+      _homeBooksGenreLoaded = "";
+      loadHomeBooks(genre, true);
       return;
     }
 
