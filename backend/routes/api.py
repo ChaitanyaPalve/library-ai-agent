@@ -394,6 +394,37 @@ def admin_reset_books():
                     "message": f"Reset availability for {count} book(s). All books are now issuable."}), 200
 
 
+@api.route("/admin/seed-books", methods=["POST"])
+def admin_seed_books():
+    """
+    POST /api/admin/seed-books
+    Inserts all sample books into the catalogue (skips duplicates by ISBN).
+    Useful when the database is empty and no CLI access is available.
+    No auth guard — this is a demo app.
+    """
+    import sys, os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+    from scripts.seed_db import SAMPLE_BOOKS
+    db = get_db()
+    inserted = 0
+    refreshed = 0
+    for book in SAMPLE_BOOKS:
+        try:
+            db.books.insert_one(book)
+            inserted += 1
+        except Exception as e:
+            if "duplicate" in str(e).lower() or "E11000" in str(e):
+                update_fields = {"available_copies": book["total_copies"], "subject_tags": book["subject_tags"]}
+                if book.get("genre"):
+                    update_fields["genre"] = book["genre"]
+                if book.get("description"):
+                    update_fields["description"] = book["description"]
+                db.books.update_one({"isbn": book["isbn"]}, {"$set": update_fields})
+                refreshed += 1
+    return jsonify({"ok": True, "inserted": inserted, "refreshed": refreshed,
+                    "message": f"Seeded catalogue: {inserted} new, {refreshed} refreshed."}), 200
+
+
 @api.route("/automation/run", methods=["GET"])
 def automation_run():
     report = run_all_rules()

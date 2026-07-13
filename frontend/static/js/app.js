@@ -323,7 +323,12 @@ function renderPinCard(book, index) {
     ? `<div class="pin-card__specialty-badge">${esc(specialtyLabel)}</div>` : "";
 
   // Book cover: coloured block with title + author overlaid
+  const coverDescId = `cover-desc-${esc(book._id)}`;
+  const coverDesc = book.description
+    ? `<div class="pin-card__cover-desc" id="${coverDescId}">${esc(book.description)}</div>`
+    : `<div class="pin-card__cover-desc pin-card__cover-desc--loading" id="${coverDescId}" data-book-id="${esc(book._id)}"></div>`;
   const thumbCover = `
+    ${coverDesc}
     <div class="pin-card__cover-title">${esc(book.title)}</div>
     <div class="pin-card__cover-author">${esc(book.author)}</div>`;
 
@@ -384,23 +389,16 @@ function renderPinCard(book, index) {
     })
       .then((r) => r.json())
       .then((d) => {
-        if (d.description) {
-          // Update all matching desc elements (card may appear in multiple grids)
-          document.querySelectorAll(`.pin-card__desc--loading[data-book-id="${bookId}"]`).forEach((e) => {
-            e.textContent = d.description;
-            e.classList.remove("pin-card__desc--loading");
-          });
-        } else {
-          document.querySelectorAll(`.pin-card__desc--loading[data-book-id="${bookId}"]`).forEach((e) => {
-            e.textContent = "";
-            e.classList.remove("pin-card__desc--loading");
-          });
-        }
+        const text = d.description || "";
+        document.querySelectorAll(`[data-book-id="${bookId}"]`).forEach((e) => {
+          e.textContent = text;
+          e.classList.remove("pin-card__desc--loading", "pin-card__cover-desc--loading");
+        });
       })
       .catch(() => {
-        document.querySelectorAll(`.pin-card__desc--loading[data-book-id="${bookId}"]`).forEach((e) => {
+        document.querySelectorAll(`[data-book-id="${bookId}"]`).forEach((e) => {
           e.textContent = "";
-          e.classList.remove("pin-card__desc--loading");
+          e.classList.remove("pin-card__desc--loading", "pin-card__cover-desc--loading");
         });
       });
   }
@@ -419,7 +417,7 @@ function renderPinCard(book, index) {
 
   // Called after any grid renders to start observing new lazy desc elements.
   window._observeDescriptions = (container = document) => {
-    container.querySelectorAll(".pin-card__desc--loading").forEach((el) => observer.observe(el));
+    container.querySelectorAll(".pin-card__desc--loading, .pin-card__cover-desc--loading").forEach((el) => observer.observe(el));
   };
 })();
 
@@ -834,6 +832,35 @@ if (resetBooksBtn) {
     } finally {
       resetBooksBtn.disabled = false;
       resetBooksBtn.textContent = "🔄 Reset Book Availability";
+    }
+  });
+}
+
+// Seed full catalogue button
+const seedBooksBtn = $("seedBooksBtn");
+const seedBooksMsg = $("seedBooksMsg");
+if (seedBooksBtn) {
+  seedBooksBtn.addEventListener("click", async () => {
+    seedBooksBtn.disabled = true;
+    seedBooksBtn.textContent = "Seeding…";
+    try {
+      const res  = await fetch("/api/admin/seed-books", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        seedBooksMsg.textContent = `✅ ${data.message}`;
+        seedBooksMsg.style.color = "var(--color-success, #166534)";
+        showToast(data.message);
+        // Reload home books so newly seeded titles appear immediately
+        _homeBooksGenreLoaded = "";
+        loadHomeBooks(state.homeGenre, true);
+      } else {
+        showToast("Seeding failed.", true);
+      }
+    } catch {
+      showToast("Seed request failed. Check server connection.", true);
+    } finally {
+      seedBooksBtn.disabled = false;
+      seedBooksBtn.textContent = "📚 Seed Full Catalogue";
     }
   });
 }

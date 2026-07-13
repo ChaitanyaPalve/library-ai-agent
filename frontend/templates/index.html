@@ -134,10 +134,23 @@
       <div class="filter-strip" id="homeGenreStrip" role="list" aria-label="Browse by genre" style="margin-bottom:var(--space-xl)">
         <button class="filter-chip filter-chip--active" data-genre="all" role="listitem">All</button>
         <button class="filter-chip" data-genre="fiction" role="listitem">Fiction</button>
+        <button class="filter-chip" data-genre="fantasy" role="listitem">Fantasy</button>
+        <button class="filter-chip" data-genre="science fiction" role="listitem">Sci-Fi</button>
+        <button class="filter-chip" data-genre="mystery" role="listitem">Mystery</button>
         <button class="filter-chip" data-genre="horror" role="listitem">Horror</button>
         <button class="filter-chip" data-genre="romance" role="listitem">Romance</button>
         <button class="filter-chip" data-genre="graphic novel" role="listitem">Graphic Novel</button>
         <button class="filter-chip" data-genre="biography" role="listitem">Biography</button>
+        <button class="filter-chip" data-genre="history" role="listitem">History</button>
+        <button class="filter-chip" data-genre="philosophy" role="listitem">Philosophy</button>
+        <button class="filter-chip" data-genre="self-help" role="listitem">Self-Help</button>
+        <button class="filter-chip" data-genre="comedy" role="listitem">Comedy</button>
+        <button class="filter-chip" data-genre="productivity" role="listitem">Productivity</button>
+        <button class="filter-chip" data-genre="business" role="listitem">Business</button>
+        <button class="filter-chip" data-genre="travel" role="listitem">Travel</button>
+        <button class="filter-chip" data-genre="young adult" role="listitem">Young Adult</button>
+        <button class="filter-chip" data-genre="literary fiction" role="listitem">Literary Fiction</button>
+        <button class="filter-chip" data-genre="spirituality" role="listitem">Spiritual</button>
         <button class="filter-chip" data-genre="machine learning" role="listitem">Machine Learning</button>
         <button class="filter-chip" data-genre="data science" role="listitem">Data Science</button>
         <button class="filter-chip" data-genre="algorithms" role="listitem">Algorithms</button>
@@ -257,14 +270,20 @@
         <div id="explainPanel" class="explain-panel hidden"></div>
       </div>
 
-      <!-- Admin quick-fix: reset all book availability -->
+      <!-- Admin quick-fix: reset all book availability + seed catalogue -->
       <div style="margin-bottom:var(--space-lg)">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <button id="resetBooksBtn" class="btn-secondary" style="background:var(--color-surface-card);border-color:var(--color-hairline)">
             🔄 Reset Book Availability
           </button>
+          <button id="seedBooksBtn" class="btn-secondary" style="background:var(--color-surface-card);border-color:var(--color-hairline)">
+            📚 Seed Full Catalogue
+          </button>
           <span id="resetBooksMsg" style="font-size:13px;color:var(--color-mute)">
             Restores all books to full copies if they appear stuck as "Unavailable"
+          </span>
+          <span id="seedBooksMsg" style="font-size:13px;color:var(--color-mute)">
+            Populates the database with all books across every genre
           </span>
         </div>
       </div>
@@ -377,10 +396,23 @@
       <li class="drawer__section-label">Browse by Genre</li>
       <li><button class="drawer__item" data-genre="all">All Books</button></li>
       <li><button class="drawer__item" data-genre="fiction">Fiction</button></li>
+      <li><button class="drawer__item" data-genre="fantasy">Fantasy</button></li>
+      <li><button class="drawer__item" data-genre="science fiction">Sci-Fi</button></li>
+      <li><button class="drawer__item" data-genre="mystery">Mystery</button></li>
       <li><button class="drawer__item" data-genre="horror">Horror</button></li>
       <li><button class="drawer__item" data-genre="romance">Romance</button></li>
       <li><button class="drawer__item" data-genre="graphic novel">Graphic Novel</button></li>
       <li><button class="drawer__item" data-genre="biography">Biography</button></li>
+      <li><button class="drawer__item" data-genre="history">History</button></li>
+      <li><button class="drawer__item" data-genre="philosophy">Philosophy</button></li>
+      <li><button class="drawer__item" data-genre="self-help">Self-Help</button></li>
+      <li><button class="drawer__item" data-genre="comedy">Comedy</button></li>
+      <li><button class="drawer__item" data-genre="productivity">Productivity</button></li>
+      <li><button class="drawer__item" data-genre="business">Business</button></li>
+      <li><button class="drawer__item" data-genre="travel">Travel</button></li>
+      <li><button class="drawer__item" data-genre="young adult">Young Adult</button></li>
+      <li><button class="drawer__item" data-genre="literary fiction">Literary Fiction</button></li>
+      <li><button class="drawer__item" data-genre="spirituality">Spiritual</button></li>
       <li><button class="drawer__item" data-genre="machine learning">Machine Learning</button></li>
       <li><button class="drawer__item" data-genre="data science">Data Science</button></li>
       <li><button class="drawer__item" data-genre="algorithms">Algorithms</button></li>
