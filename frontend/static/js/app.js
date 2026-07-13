@@ -265,9 +265,16 @@ async function loadHomeBooks(genre = "all", force = false) {
   homeBooksSection.classList.remove("hidden");
 
   try {
-    const url = genre && genre !== "all"
-      ? `/api/books?subject=${encodeURIComponent(genre)}&limit=200`
-      : `/api/books?limit=200`;
+    let url;
+    if (genre && genre.startsWith("mood:")) {
+      // Mood chips → dedicated mood endpoint
+      const moodName = genre.slice(5); // strip "mood:" prefix
+      url = `/api/mood-books/${encodeURIComponent(moodName)}`;
+    } else if (genre && genre !== "all") {
+      url = `/api/books?subject=${encodeURIComponent(genre)}&limit=200`;
+    } else {
+      url = `/api/books?limit=200`;
+    }
     const res  = await fetch(url);
     const data = await res.json();
     homeBooksLoading.classList.add("hidden");

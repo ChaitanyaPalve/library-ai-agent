@@ -41,6 +41,12 @@ if (isConfigured) {
       const sid      = sessionStorage.getItem("studentId");
       if (demoUser && sid) {
         window._onAuthSignIn?.({ email: sid + "@demo", displayName: sid, uid: "demo" });
+        // Persist demo student record — best-effort (firebase_uid defaults to "demo")
+        fetch("/api/students", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ student_id: sid, firebase_uid: "demo", email: sid + "@demo" }),
+        }).catch(() => {});
       } else {
         window.location.replace("/login");
       }

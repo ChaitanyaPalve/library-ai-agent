@@ -267,12 +267,12 @@ def mood_books(mood: str):
 @api.route("/books", methods=["GET"])
 def all_books():
     """
-    GET /api/books?subject=fiction&skip=0&limit=50
+    GET /api/books?subject=fiction&skip=0&limit=200
     Returns all books, optionally filtered by subject tag.
     """
     subject = request.args.get("subject", None)
     skip    = int(request.args.get("skip",  0))
-    limit   = min(int(request.args.get("limit", 50)), 100)
+    limit   = min(int(request.args.get("limit", 50)), 200)
     books   = get_all_books(skip=skip, limit=limit, subject=subject)
     return jsonify({"books": books, "total": len(books), "skip": skip, "limit": limit})
 
@@ -285,7 +285,8 @@ def all_books():
 @api.route("/books/high-demand", methods=["GET"])
 def high_demand():
     threshold = int(request.args.get("threshold", 5))
-    books = get_high_demand_books(threshold=threshold)
+    limit     = int(request.args.get("limit", 20))
+    books = get_high_demand_books(threshold=threshold, limit=limit)
     return jsonify({"books": books, "total": len(books)})
 
 
@@ -360,17 +361,16 @@ def persist_student():
     """
     Body: { "student_id": "s001", "firebase_uid": "abc123", "email": "student@uni.edu" }
     Upserts the student document in MongoDB.  Called from auth.js on sign-in.
+    firebase_uid is optional for demo/local accounts (falls back to "demo").
     """
     body       = request.get_json(force=True)
     student_id = body.get("student_id", "").strip()
-    firebase_uid = body.get("firebase_uid", "").strip()
+    firebase_uid = body.get("firebase_uid", "demo").strip() or "demo"
     email      = body.get("email", "").strip() or None
 
     id_error = validate_student_id(student_id)
     if id_error:
         return jsonify({"error": id_error}), 400
-    if not firebase_uid:
-        return jsonify({"error": "firebase_uid is required"}), 400
 
     doc = upsert_student(student_id, firebase_uid, email)
     return jsonify(doc), 200
