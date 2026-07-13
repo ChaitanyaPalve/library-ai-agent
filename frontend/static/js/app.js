@@ -291,6 +291,7 @@ async function loadHomeBooks(genre = "all", force = false) {
       url = `/api/books?limit=200`;
     }
     const res  = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
     // If this genre returned 0 books, trigger a catalogue refresh once
@@ -305,14 +306,16 @@ async function loadHomeBooks(genre = "all", force = false) {
 
     homeBooksLoading.classList.add("hidden");
 
-    homeBooksCount.textContent = `${data.total} book${data.total !== 1 ? "s" : ""}`;
-    homeBooksGrid.innerHTML = (data.books || []).map((b, i) => renderPinCard(b, i)).join("");
+    const books = data.books || [];
+    homeBooksCount.textContent = `${books.length} book${books.length !== 1 ? "s" : ""}`;
+    homeBooksGrid.innerHTML = books.map((b, i) => renderPinCard(b, i)).join("");
     attachReserveListeners(homeBooksGrid);
     attachTagListeners(homeBooksGrid);
     window._observeDescriptions?.(homeBooksGrid);
     _homeBooksGenreLoaded = genre;
-  } catch {
+  } catch (err) {
     homeBooksLoading.classList.add("hidden");
+    console.error("[loadHomeBooks]", err);
     showToast("Failed to load books.", true);
   }
 }
