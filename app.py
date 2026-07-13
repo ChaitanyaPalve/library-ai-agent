@@ -43,6 +43,35 @@ def create_app() -> Flask:
     except Exception as exc:
         logger.warning("Could not ensure DB indexes: %s", exc)
 
+    # ── Upsert full catalogue on every startup ───────────────────────────────
+    # Always insert new books and refresh subject_tags/genre/description on
+    # existing ones so that genre chips always have up-to-date data.
+    try:
+        from backend.models.db import get_db
+        from scripts.seed_db import SAMPLE_BOOKS
+        _db = get_db()
+        inserted = 0
+        refreshed = 0
+        for book in SAMPLE_BOOKS:
+            try:
+                _db.books.insert_one(book)
+                inserted += 1
+            except Exception as e:
+                if "duplicate" in str(e).lower() or "E11000" in str(e):
+                    update_fields = {
+                        "subject_tags": book["subject_tags"],
+                        "available_copies": book["total_copies"],
+                    }
+                    if book.get("genre"):
+                        update_fields["genre"] = book["genre"]
+                    if book.get("description"):
+                        update_fields["description"] = book["description"]
+                    _db.books.update_one({"isbn": book["isbn"]}, {"$set": update_fields})
+                    refreshed += 1
+        logger.info("[startup] Catalogue upserted: %d inserted, %d refreshed.", inserted, refreshed)
+    except Exception as exc:
+        logger.warning("Could not upsert books on startup: %s", exc)
+
     # ── Restore book availability on every startup ────────────────────────────
     # Resets available_copies = total_copies so books never appear permanently
     # "Unavailable" after testing or after a server restart.

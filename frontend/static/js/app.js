@@ -254,6 +254,18 @@ async function doSearch() {
 // ─────────────────────────────────────────────────────────────────────────────
 let _homeBooksGenreLoaded = "";
 
+// Tracks whether a seed/refresh has already been triggered this session
+// so we don't loop infinitely if a genre genuinely has 0 books after refresh.
+let _seedRefreshDone = false;
+
+async function _refreshCatalogue() {
+  if (_seedRefreshDone) return;
+  _seedRefreshDone = true;
+  try {
+    await fetch("/api/admin/seed-books", { method: "POST" });
+  } catch { /* silent — best effort */ }
+}
+
 async function loadHomeBooks(genre = "all", force = false) {
   if (!force && _homeBooksGenreLoaded === genre) return;
 
@@ -271,8 +283,7 @@ async function loadHomeBooks(genre = "all", force = false) {
   try {
     let url;
     if (genre && genre.startsWith("mood:")) {
-      // Mood chips → dedicated mood endpoint
-      const moodName = genre.slice(5); // strip "mood:" prefix
+      const moodName = genre.slice(5);
       url = `/api/mood-books/${encodeURIComponent(moodName)}`;
     } else if (genre && genre !== "all") {
       url = `/api/books?subject=${encodeURIComponent(genre)}&limit=200`;
@@ -280,17 +291,31 @@ async function loadHomeBooks(genre = "all", force = false) {
       url = `/api/books?limit=200`;
     }
     const res  = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+
+    // If this genre returned 0 books, trigger a catalogue refresh once
+    // (fixes stale subject_tags on existing books) then reload.
+    if (!data.total && !_seedRefreshDone) {
+      await _refreshCatalogue();
+      homeBooksLoading.classList.add("hidden");
+      _homeBooksGenreLoaded = "";
+      loadHomeBooks(genre, true);
+      return;
+    }
+
     homeBooksLoading.classList.add("hidden");
 
-    homeBooksCount.textContent = `${data.total} book${data.total !== 1 ? "s" : ""}`;
-    homeBooksGrid.innerHTML = (data.books || []).map((b, i) => renderPinCard(b, i)).join("");
+    const books = data.books || [];
+    homeBooksCount.textContent = `${books.length} book${books.length !== 1 ? "s" : ""}`;
+    homeBooksGrid.innerHTML = books.map((b, i) => renderPinCard(b, i)).join("");
     attachReserveListeners(homeBooksGrid);
     attachTagListeners(homeBooksGrid);
     window._observeDescriptions?.(homeBooksGrid);
     _homeBooksGenreLoaded = genre;
-  } catch {
+  } catch (err) {
     homeBooksLoading.classList.add("hidden");
+    console.error("[loadHomeBooks]", err);
     showToast("Failed to load books.", true);
   }
 }

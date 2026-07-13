@@ -456,6 +456,10 @@ def get_all_books(skip: int = 0, limit: int = 50, subject: str | None = None) ->
     results = []
     for doc in cursor:
         doc["_id"] = str(doc["_id"])
+        # Serialize datetime fields so jsonify never raises TypeError
+        for field in ("created_at", "updated_at"):
+            if doc.get(field) and hasattr(doc[field], "isoformat"):
+                doc[field] = doc[field].isoformat()
         results.append(doc)
     return results
 
