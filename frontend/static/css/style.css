@@ -1488,6 +1488,121 @@ body {
 .toast--error   { background: var(--color-primary-pressed); }
 
 /* =============================================================================
+   PAGINATION
+   ============================================================================= */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--space-xxl) 0 var(--space-xl);
+  flex-wrap: wrap;
+}
+
+.pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--color-canvas);
+  color: var(--color-body);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.pagination__btn:hover:not(:disabled):not(.pagination__btn--active) {
+  background: var(--color-surface-card);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.pagination__btn--active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+  cursor: default;
+}
+.pagination__btn--nav {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-mute);
+}
+.pagination__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.pagination__ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 36px;
+  color: var(--color-ash);
+  font-size: 14px;
+  user-select: none;
+}
+
+/* =============================================================================
+   DASHBOARD STAT CARDS
+   ============================================================================= */
+.dash-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.dash-stat-card {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  padding: var(--space-xl) var(--space-xxl);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.dash-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--color-primary);
+  opacity: 0.6;
+}
+.dash-stat-card__value {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--color-ink);
+  line-height: 1.1;
+}
+.dash-stat-card__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.dash-stat-loading {
+  font-size: 13px;
+  color: var(--color-ash);
+  padding: var(--space-md) 0;
+}
+
+@media (max-width: 640px) {
+  .dash-stats-row { grid-template-columns: 1fr 1fr; }
+  .pagination__btn { min-width: 32px; height: 32px; font-size: 13px; }
+}
+
+/* =============================================================================
    BOOK CARD COLOUR PALETTE  — 18 calm academic tints
    ============================================================================= */
 .pin-thumb--0  { background: #dbeafe; }

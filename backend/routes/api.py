@@ -268,13 +268,24 @@ def mood_books(mood: str):
 @api.route("/books", methods=["GET"])
 def all_books():
     """
-    GET /api/books?subject=fiction&skip=0&limit=200
+    GET /api/books?subject=fiction&skip=0&limit=200&count=1
     Returns all books, optionally filtered by subject tag.
+    Pass count=1 to get only the catalogue total (no book documents returned).
     """
-    subject = request.args.get("subject", None)
-    skip    = int(request.args.get("skip",  0))
-    limit   = min(int(request.args.get("limit", 50)), 200)
-    books   = get_all_books(skip=skip, limit=limit, subject=subject)
+    subject   = request.args.get("subject", None)
+    skip      = int(request.args.get("skip",  0))
+    limit     = min(int(request.args.get("limit", 50)), 200)
+    count_only = request.args.get("count") == "1"
+
+    if count_only:
+        db = get_db()
+        query = {}
+        if subject and subject.lower() != "all":
+            query["subject_tags"] = {"$regex": subject, "$options": "i"}
+        total = db.books.count_documents(query)
+        return jsonify({"books": [], "total": total, "skip": 0, "limit": 0})
+
+    books = get_all_books(skip=skip, limit=limit, subject=subject)
     return jsonify({"books": books, "total": len(books), "skip": skip, "limit": limit})
 
 
