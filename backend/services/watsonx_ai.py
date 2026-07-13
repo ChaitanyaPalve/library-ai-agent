@@ -152,6 +152,18 @@ Reply with only YES or NO.
 
 Answer:"""
 
+_AI_PICKS_PROMPT = """You are a passionate university librarian recommending books to students.
+Here are {count} books currently available in the library:
+{book_list}
+
+For each book write one punchy sentence (max 18 words) explaining WHY a student should read it right now.
+Format — one line per book, exactly as:
+  <isbn>|<sentence>
+
+Do not add any preamble. Reply with only the lines.
+
+Picks:"""
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -248,3 +260,41 @@ def verify_book_is_real(title: str, author: str) -> bool:
     )
     answer = (result.strip() if isinstance(result, str) else result).upper()
     return answer.startswith("YES")
+
+
+def generate_ai_picks(books: list[dict]) -> list[dict]:
+    """
+    Given a list of book dicts (each with isbn, title, author),
+    return the same list with an added 'ai_blurb' key containing a
+    one-sentence WatsonX-generated reason to read it.
+    Falls back to the book's own description if AI call fails.
+    """
+    if not books:
+        return []
+    model = _get_model()
+    book_lines = "\n".join(
+        f'{b.get("isbn", b.get("_id", "?"))}|"{b["title"]}" by {b["author"]}'
+        for b in books
+    )
+    prompt = _AI_PICKS_PROMPT.format(count=len(books), book_list=book_lines)
+    from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GP
+    try:
+        raw = model.generate_text(
+            prompt=prompt,
+            params={GP.MAX_NEW_TOKENS: 300, GP.MIN_NEW_TOKENS: 20, GP.TEMPERATURE: 0.75},
+        )
+        raw = raw.strip() if isinstance(raw, str) else raw
+        # Parse isbn|sentence lines
+        blurb_map: dict[str, str] = {}
+        for line in raw.splitlines():
+            line = line.strip().lstrip("•- ")
+            if "|" in line:
+                isbn_part, _, sentence = line.partition("|")
+                blurb_map[isbn_part.strip()] = sentence.strip()
+        for book in books:
+            key = book.get("isbn", book.get("_id", ""))
+            book["ai_blurb"] = blurb_map.get(key, book.get("description", ""))
+    except Exception:
+        for book in books:
+            book["ai_blurb"] = book.get("description", "")
+    return books

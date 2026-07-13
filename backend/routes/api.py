@@ -21,7 +21,7 @@ from backend.services.watson_nlu   import analyse_query, analyse_sentiment
 from backend.services.watsonx_ai   import (
     generate_search_response, generate_reservation_message, recommend_books,
     generate_chatbot_response, generate_suggest_book_reply,
-    generate_book_description, verify_book_is_real,
+    generate_book_description, verify_book_is_real, generate_ai_picks,
 )
 from backend.services.library_lms  import (
     search_books, check_availability,
@@ -500,6 +500,43 @@ def recommendations(student_id: str):
         "history": history,
         "recommendations": ai_text,
     })
+
+
+# ---------------------------------------------------------------------------
+# WatsonX AI – random picks with AI blurbs
+# ---------------------------------------------------------------------------
+
+@api.route("/ai-picks", methods=["GET"])
+def ai_picks():
+    """
+    GET /api/ai-picks?count=6
+    Returns <count> random available books from the catalogue, each decorated
+    with an 'ai_blurb' — a one-sentence WatsonX-generated reason to read it.
+    Falls back to the book's own description if WatsonX is unavailable.
+    """
+    import random
+    count = min(int(request.args.get("count", 6)), 12)
+    db = get_db()
+    # Pull a broader pool then sample randomly so picks vary each visit
+    pool = list(
+        db.books.find(
+            {"available_copies": {"$gte": 1}},
+            {"_id": 1, "title": 1, "author": 1, "isbn": 1,
+             "genre": 1, "subject_tags": 1, "description": 1,
+             "available_copies": 1, "total_copies": 1, "demand_score": 1},
+        ).limit(200)
+    )
+    if not pool:
+        return jsonify({"picks": [], "total": 0})
+    sample = random.sample(pool, min(count, len(pool)))
+    for b in sample:
+        b["_id"] = str(b["_id"])
+    try:
+        sample = generate_ai_picks(sample)
+    except Exception:
+        for b in sample:
+            b.setdefault("ai_blurb", b.get("description", ""))
+    return jsonify({"picks": sample, "total": len(sample)})
 
 
 # ---------------------------------------------------------------------------

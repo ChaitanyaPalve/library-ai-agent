@@ -128,7 +128,11 @@ function switchPanel(panelName) {
 }
 
 $("navResBtn").addEventListener("click",   () => switchPanel("reservations"));
-$("navRecsBtn").addEventListener("click",  () => { switchPanel("recommendations"); loadRecommendations(); });
+$("navRecsBtn").addEventListener("click",  () => {
+  switchPanel("recommendations");
+  loadRecommendations();
+  loadAIPicks(recsAiPicksSect, recsAiPicksGrid, recsAiPicksLoad);
+});
 $("navDashBtn").addEventListener("click",  () => switchPanel("dashboard"));
 $("homeBtn").addEventListener("click", (e) => { e.preventDefault(); switchPanel("search"); });
 
@@ -951,10 +955,11 @@ window._onAuthSignIn = (user) => {
   const sid = sessionStorage.getItem("studentId") || user.displayName || "student";
   state.studentId = sid;
   studentIdInput.value = sid;
-  // Load homepage books, WRTD banner, and suggested books after sign-in
+  // Load homepage books, WRTD banner, suggested books and AI picks after sign-in
   loadHomeBooks("all");
   loadWRTD();
   loadSuggestedBooks();
+  loadAIPicks(aiPicksSection, aiPicksGrid, aiPicksLoading);
 };
 
 window._getStudentId = () => state.studentId;
@@ -968,6 +973,7 @@ if (sessionStorage.getItem("studentId")) {
   loadHomeBooks("all");
   loadWRTD();
   loadSuggestedBooks();
+  loadAIPicks(aiPicksSection, aiPicksGrid, aiPicksLoading);
 }
 
 // Populate all quote placeholders on load
@@ -1248,6 +1254,76 @@ async function loadRecommendations(force = false) {
 }
 
 // =============================================================================
+// AI PICKS  (WatsonX AI — random catalogue books with blurbs)
+// =============================================================================
+
+const aiPicksSection   = $("aiPicksSection");
+const aiPicksGrid      = $("aiPicksGrid");
+const aiPicksLoading   = $("aiPicksLoading");
+const aiPicksRefresh   = $("aiPicksRefresh");
+const recsAiPicksSect  = $("recsAiPicksSection");
+const recsAiPicksGrid  = $("recsAiPicksGrid");
+const recsAiPicksLoad  = $("recsAiPicksLoading");
+const recsAiPicksRefr  = $("recsAiPicksRefresh");
+
+const THUMB_CLASSES = Array.from({length: 18}, (_, i) => `pin-thumb--${i}`);
+
+function renderAiPickCard(book, index) {
+  const avail      = book.available_copies > 0;
+  const thumbClass = THUMB_CLASSES[index % THUMB_CLASSES.length];
+  return `
+    <article class="ai-pick-card" role="listitem">
+      <div class="ai-pick-card__thumb ${thumbClass}">
+        <span class="ai-pick-card__badge">✦ AI Pick</span>
+        <div class="ai-pick-card__cover-title">${esc(book.title)}</div>
+        <div class="ai-pick-card__cover-author">${esc(book.author)}</div>
+      </div>
+      <div class="ai-pick-card__body">
+        <p class="ai-pick-card__blurb">${esc(book.ai_blurb || book.description || "")}</p>
+        <div class="ai-pick-card__footer">
+          <span class="ai-pick-card__avail ai-pick-card__avail--${avail ? "yes" : "no"}">
+            ${avail ? `${book.available_copies} available` : "Waitlist"}
+          </span>
+          <button class="btn-pin-action ai-pick-card__btn${avail ? "" : " btn-pin-action--waitlist"}"
+                  data-id="${esc(book._id)}"
+                  data-title="${esc(book.title)}"
+                  data-author="${esc(book.author)}"
+                  data-avail="${avail}">
+            ${avail ? "Issue" : "Waitlist"}
+          </button>
+        </div>
+      </div>
+    </article>`;
+}
+
+async function loadAIPicks(targetSection, targetGrid, targetLoading, count = 6) {
+  if (!targetSection || !targetGrid) return;
+  targetSection.classList.add("hidden");
+  targetLoading.classList.remove("hidden");
+  try {
+    const res  = await fetch(`/api/ai-picks?count=${count}`);
+    const data = await res.json();
+    targetLoading.classList.add("hidden");
+    if (!data.picks || data.picks.length === 0) return;
+    targetGrid.innerHTML = data.picks.map((b, i) => renderAiPickCard(b, i)).join("");
+    attachReserveListeners(targetGrid);
+    targetSection.classList.remove("hidden");
+  } catch {
+    targetLoading.classList.add("hidden");
+  }
+}
+
+// Refresh buttons
+if (aiPicksRefresh) {
+  aiPicksRefresh.addEventListener("click", () =>
+    loadAIPicks(aiPicksSection, aiPicksGrid, aiPicksLoading));
+}
+if (recsAiPicksRefr) {
+  recsAiPicksRefr.addEventListener("click", () =>
+    loadAIPicks(recsAiPicksSect, recsAiPicksGrid, recsAiPicksLoad));
+}
+
+// =============================================================================
 // WHAT TO READ TODAY  (WatsonX AI — homepage banner)
 // =============================================================================
 
@@ -1319,6 +1395,7 @@ async function loadWRTD(force = false) {
 $("wrtdBtn").addEventListener("click", () => {
   switchPanel("recommendations");
   loadRecommendations();
+  loadAIPicks(recsAiPicksSect, recsAiPicksGrid, recsAiPicksLoad);
 });
 
 

@@ -105,6 +105,24 @@
         <span class="wrtd-loading__text">WatsonX AI is picking today's reads…</span>
       </div>
 
+      <!-- WatsonX AI Suggested Books — homepage strip -->
+      <div id="aiPicksSection" class="ai-picks-section hidden">
+        <div class="ai-picks-header">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <circle cx="10" cy="10" r="9" fill="#1a56db" opacity=".15"/>
+            <path d="M10 4v3M10 13v3M4 10h3M13 10h3" stroke="#1a56db" stroke-width="1.6" stroke-linecap="round"/>
+            <circle cx="10" cy="10" r="2" fill="#1a56db"/>
+          </svg>
+          <span class="ai-picks-header__label">WatsonX AI · Suggested for You</span>
+          <button class="btn-secondary ai-picks-header__refresh" id="aiPicksRefresh" aria-label="Refresh AI picks">↻ Refresh</button>
+        </div>
+        <div id="aiPicksGrid" class="ai-picks-grid"></div>
+      </div>
+      <div id="aiPicksLoading" class="wrtd-loading hidden">
+        <div class="lib-spinner" aria-hidden="true"><div class="lib-spinner__ring"></div></div>
+        <span class="wrtd-loading__text">WatsonX AI is selecting books for you…</span>
+      </div>
+
       <!-- Hero -->
       <div class="hero">
         <h1 class="hero__headline">Find the right book, right now</h1>
@@ -330,6 +348,24 @@
       <div class="panel-header">
         <h2 class="panel-header__title">For You</h2>
         <p class="panel-header__sub">WatsonX AI recommendations based on your issued and returned books</p>
+      </div>
+
+      <!-- WatsonX AI random picks — always visible in For You -->
+      <div id="recsAiPicksSection" class="ai-picks-section hidden">
+        <div class="ai-picks-header">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <circle cx="10" cy="10" r="9" fill="#1a56db" opacity=".15"/>
+            <path d="M10 4v3M10 13v3M4 10h3M13 10h3" stroke="#1a56db" stroke-width="1.6" stroke-linecap="round"/>
+            <circle cx="10" cy="10" r="2" fill="#1a56db"/>
+          </svg>
+          <span class="ai-picks-header__label">WatsonX AI · Books you might enjoy</span>
+          <button class="btn-secondary ai-picks-header__refresh" id="recsAiPicksRefresh" aria-label="Refresh AI picks">↻ Refresh</button>
+        </div>
+        <div id="recsAiPicksGrid" class="ai-picks-grid"></div>
+      </div>
+      <div id="recsAiPicksLoading" class="wrtd-loading hidden">
+        <div class="lib-spinner" aria-hidden="true"><div class="lib-spinner__ring"></div></div>
+        <span class="wrtd-loading__text">WatsonX AI is curating picks for you…</span>
       </div>
 
       <div id="recsAiCard" class="ai-card hidden">
