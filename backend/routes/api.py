@@ -32,7 +32,7 @@ from backend.services.library_lms  import (
     reset_book_availability,
 )
 from backend.automation.robo_rules import run_all_rules
-from backend.models.db import get_db, get_client
+from backend.models.db import get_db
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
@@ -49,13 +49,12 @@ def status():
     """
     services = {}
 
-    # 1. MongoDB Atlas
+    # 1. MongoDB Atlas — reuse the module-level singleton client (no new connection)
     t0 = time.monotonic()
     try:
-        client = get_client()
-        db = client["library"]
+        from backend.models.db import get_db
+        db = get_db()
         book_count = db.books.count_documents({})
-        client.close()
         services["mongodb"] = {
             "ok": True,
             "latency_ms": round((time.monotonic() - t0) * 1000),

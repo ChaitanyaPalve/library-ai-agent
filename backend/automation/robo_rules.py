@@ -99,10 +99,16 @@ def rule_promote_waitlist(book_id: str) -> dict | None:
     if not book:
         return None  # No copies or book not found
 
-    # Find the oldest waitlisted reservation
+    # Find the oldest waitlisted reservation and promote with proper issue dates
+    now = datetime.utcnow()
     reservation = db.reservations.find_one_and_update(
         {"book_id": obj_id, "status": "waitlisted"},
-        {"$set": {"status": "active", "updated_at": datetime.utcnow()}},
+        {"$set": {
+            "status":    "active",
+            "issued_at": now,
+            "due_date":  now + timedelta(days=7),
+            "updated_at": now,
+        }},
         sort=[("created_at", 1)],
         return_document=ReturnDocument.AFTER,
     )

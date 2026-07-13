@@ -72,17 +72,6 @@ def create_app() -> Flask:
     except Exception as exc:
         logger.warning("Could not upsert books on startup: %s", exc)
 
-    # ── Restore book availability on every startup ────────────────────────────
-    # Resets available_copies = total_copies so books never appear permanently
-    # "Unavailable" after testing or after a server restart.
-    try:
-        from backend.services.library_lms import reset_book_availability
-        reset_count = reset_book_availability()
-        if reset_count:
-            logger.info("[startup] Reset available_copies for %d book(s).", reset_count)
-    except Exception as exc:
-        logger.warning("Could not reset book availability on startup: %s", exc)
-
     # ── Optional: APScheduler for periodic Robo rule runs ───────────────────
     if os.getenv("ENABLE_SCHEDULER", "false").lower() == "true":
         from apscheduler.schedulers.background import BackgroundScheduler

@@ -1118,29 +1118,39 @@ logoutNavBtn.addEventListener("click", () => {
   if (window._firebaseSignOut) window._firebaseSignOut();
 });
 
-window._onAuthSignIn = (user) => {
-  const sid = sessionStorage.getItem("studentId") || user.displayName || "student";
+// Guard: tracks whether the initial data-load has already been kicked off.
+// Prevents the double-load that happens when both _onAuthSignIn AND the
+// sessionStorage fallback below both fire for the same page load.
+let _appBooted = false;
+
+function _bootApp(sid) {
+  if (_appBooted) return;
+  _appBooted = true;
   state.studentId = sid;
   studentIdInput.value = sid;
-  // Load homepage books, WRTD banner, suggested books and AI picks after sign-in
   loadHomeBooks("all");
   loadWRTD();
   loadSuggestedBooks();
   loadAIPicks(aiPicksSection, aiPicksGrid, aiPicksLoading);
+}
+
+window._onAuthSignIn = (user) => {
+  const sid = sessionStorage.getItem("studentId") || user.displayName || "student";
+  _bootApp(sid);
 };
 
 window._getStudentId = () => state.studentId;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers
+// Initial load fallback
 // ─────────────────────────────────────────────────────────────────────────────
-// Initial load — if auth.js doesn't fire _onAuthSignIn before DOMContentLoaded
-// (demo mode sets it synchronously via sessionStorage check), load books now.
-if (sessionStorage.getItem("studentId")) {
-  loadHomeBooks("all");
-  loadWRTD();
-  loadSuggestedBooks();
-  loadAIPicks(aiPicksSection, aiPicksGrid, aiPicksLoading);
+// auth.js (type="module") may resolve before or after app.js (defer).
+// If sessionStorage already has a studentId (demo/local account in same tab),
+// boot now. _bootApp's guard ensures it runs at most once even if
+// _onAuthSignIn fires afterwards.
+const _initSid = sessionStorage.getItem("studentId");
+if (_initSid) {
+  _bootApp(_initSid);
 }
 
 // Populate all quote placeholders on load
@@ -1528,22 +1538,25 @@ async function loadWRTD(force = false) {
 
   try {
     const sid = state.studentId;
-    const res  = await fetch(`/api/recommendations/${encodeURIComponent(sid)}`);
-    const data = await res.json();
+
+    // Fast path: fetch popular books and reading-log count in parallel.
+    // Only fetch the AI recommendation text if the student has actual history —
+    // avoids a slow WatsonX call on first login / no-history users.
+    const [popularRes, logRes] = await Promise.all([
+      fetch("/api/books/high-demand?threshold=0&limit=10"),
+      fetch(`/api/reading-log/${encodeURIComponent(sid)}`),
+    ]);
 
     wrtdLoading.classList.add("hidden");
 
-    let books = [];
-    if (data.history && data.history.length) {
-      const popularRes = await fetch("/api/books/high-demand?threshold=1&limit=10");
-      const popularData = await popularRes.json();
-      books = (popularData.books || []).slice(0, 5);
-      const summary = (data.recommendations || "").split("\n")[0] || "Today's top picks curated just for you.";
-      wrtdText.textContent = summary.replace(/^\u2022\s*/, "").slice(0, 120);
+    const popularData = await popularRes.json();
+    const logData     = logRes.ok ? await logRes.json() : { log: [] };
+    const hasHistory  = (logData.log || []).some((r) => r.status === "returned" || r.status === "active");
+
+    let books = (popularData.books || []).slice(0, 5);
+    if (hasHistory) {
+      wrtdText.textContent = "📚 Picks based on your reading history — curated just for you.";
     } else {
-      const popularRes = await fetch("/api/books/high-demand?threshold=0&limit=5");
-      const popularData = await popularRes.json();
-      books = (popularData.books || []).slice(0, 5);
       wrtdText.textContent = "🔥 5 hot picks from your library — issue one to start your reading history.";
     }
 
@@ -1695,9 +1708,9 @@ $("wrtdBtn").addEventListener("click", () => {
 
   // ── Suggest-book form submission ──────────────────────────────────────────
   suggestSubmit.addEventListener("click", async () => {
-    const title  = ($("suggestTitle").value  || "").trim()
-    const author = ($("suggestAuthor").value || "").trim()
-    const reason = ($("suggestReason").value || "").trim()
+    const title  = ($("suggestTitle").value  || "").trim().slice(0, 200)
+    const author = ($("suggestAuthor").value || "").trim().slice(0, 100)
+    const reason = ($("suggestReason").value || "").trim().slice(0, 400)
 
     if (!title) {
       showToast("Please enter a book title.", true)

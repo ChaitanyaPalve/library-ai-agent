@@ -65,9 +65,11 @@ def ensure_indexes():
     # Queries
     db.queries.create_index([("student_id", ASCENDING)])
     db.queries.create_index([("created_at", DESCENDING)])
-    # Reservations
+    # Reservations — compound indexes covering the most common query patterns
     db.reservations.create_index([("book_id", ASCENDING)])
     db.reservations.create_index([("student_id", ASCENDING)])
+    db.reservations.create_index([("student_id", ASCENDING), ("status", ASCENDING)])
+    db.reservations.create_index([("book_id", ASCENDING), ("status", ASCENDING)])
     # Students
     db.students.create_index([("student_id", ASCENDING)], unique=True)
     db.students.create_index([("firebase_uid", ASCENDING)])
