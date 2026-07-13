@@ -83,12 +83,13 @@ def ensure_indexes():
 # ---------------------------------------------------------------------------
 
 def make_book(title: str, author: str, isbn: str, subject_tags: list[str],
-              total_copies: int = 1, description: str = "") -> dict:
+              total_copies: int = 1, description: str = "", genre: str = "") -> dict:
     return {
         "title": title,
         "author": author,
         "isbn": isbn,
         "subject_tags": subject_tags,
+        "genre": genre,             # primary genre label shown on the card badge
         "total_copies": total_copies,
         "available_copies": total_copies,
         "demand_score": 0,          # incremented on each reservation/search hit

@@ -29,6 +29,7 @@ from backend.services.library_lms  import (
     log_query, get_high_demand_books, get_all_books,
     validate_student_id, upsert_student,
     add_review, get_reviews, get_reading_history, get_reading_log,
+    reset_book_availability,
 )
 from backend.automation.robo_rules import run_all_rules
 from backend.models.db import get_db, get_client
@@ -267,12 +268,12 @@ def mood_books(mood: str):
 @api.route("/books", methods=["GET"])
 def all_books():
     """
-    GET /api/books?subject=fiction&skip=0&limit=50
+    GET /api/books?subject=fiction&skip=0&limit=200
     Returns all books, optionally filtered by subject tag.
     """
     subject = request.args.get("subject", None)
     skip    = int(request.args.get("skip",  0))
-    limit   = min(int(request.args.get("limit", 50)), 100)
+    limit   = min(int(request.args.get("limit", 50)), 200)
     books   = get_all_books(skip=skip, limit=limit, subject=subject)
     return jsonify({"books": books, "total": len(books), "skip": skip, "limit": limit})
 
@@ -285,7 +286,8 @@ def all_books():
 @api.route("/books/high-demand", methods=["GET"])
 def high_demand():
     threshold = int(request.args.get("threshold", 5))
-    books = get_high_demand_books(threshold=threshold)
+    limit     = int(request.args.get("limit", 20))
+    books = get_high_demand_books(threshold=threshold, limit=limit)
     return jsonify({"books": books, "total": len(books)})
 
 
@@ -360,20 +362,36 @@ def persist_student():
     """
     Body: { "student_id": "s001", "firebase_uid": "abc123", "email": "student@uni.edu" }
     Upserts the student document in MongoDB.  Called from auth.js on sign-in.
+    firebase_uid is optional for demo/local accounts (falls back to "demo").
     """
     body       = request.get_json(force=True)
     student_id = body.get("student_id", "").strip()
-    firebase_uid = body.get("firebase_uid", "").strip()
+    firebase_uid = body.get("firebase_uid", "demo").strip() or "demo"
     email      = body.get("email", "").strip() or None
 
     id_error = validate_student_id(student_id)
     if id_error:
         return jsonify({"error": id_error}), 400
-    if not firebase_uid:
-        return jsonify({"error": "firebase_uid is required"}), 400
 
     doc = upsert_student(student_id, firebase_uid, email)
     return jsonify(doc), 200
+
+
+# ---------------------------------------------------------------------------
+# Admin utilities
+# ---------------------------------------------------------------------------
+
+@api.route("/admin/reset-books", methods=["POST"])
+def admin_reset_books():
+    """
+    POST /api/admin/reset-books
+    Resets available_copies = total_copies for every book in the catalogue.
+    Useful when books get stuck at 0 copies after testing/reservations.
+    No auth guard — this is a demo app.
+    """
+    count = reset_book_availability()
+    return jsonify({"ok": True, "books_reset": count,
+                    "message": f"Reset availability for {count} book(s). All books are now issuable."}), 200
 
 
 @api.route("/automation/run", methods=["GET"])

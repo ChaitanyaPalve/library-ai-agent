@@ -147,8 +147,12 @@ if (isConfigured) {
       const local = await attemptSignIn(sid, pwd);
       if (local) {
         if (!local.ok) { showError(loginError, local.msg); return; }
+        // Persist to both sessionStorage and localStorage so the session survives
+        // across tabs and page reloads on browsers that isolate sessionStorage per tab.
         sessionStorage.setItem("studentId", sid);
         sessionStorage.setItem("demoUser", "1");
+        localStorage.setItem("libStudentId", sid);
+        localStorage.setItem("libDemoUser", "1");
         window.location.replace("/");
         return;
       }
@@ -231,6 +235,8 @@ if (isConfigured) {
       if (result && result.ok) {
         sessionStorage.setItem("studentId", sid);
         sessionStorage.setItem("demoUser", "1");
+        localStorage.setItem("libStudentId", sid);
+        localStorage.setItem("libDemoUser", "1");
         window.location.replace("/");
       } else if (result && !result.ok) {
         showError(loginError, result.msg);

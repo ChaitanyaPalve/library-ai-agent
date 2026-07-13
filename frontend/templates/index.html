@@ -257,6 +257,18 @@
         <div id="explainPanel" class="explain-panel hidden"></div>
       </div>
 
+      <!-- Admin quick-fix: reset all book availability -->
+      <div style="margin-bottom:var(--space-lg)">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button id="resetBooksBtn" class="btn-secondary" style="background:var(--color-surface-card);border-color:var(--color-hairline)">
+            🔄 Reset Book Availability
+          </button>
+          <span id="resetBooksMsg" style="font-size:13px;color:var(--color-mute)">
+            Restores all books to full copies if they appear stuck as "Unavailable"
+          </span>
+        </div>
+      </div>
+
       <div class="dashboard-grid">
         <div class="feature-card">
           <h3 class="feature-card__title">High-Demand Books</h3>
