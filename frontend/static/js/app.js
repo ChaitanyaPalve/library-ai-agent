@@ -225,9 +225,18 @@ async function doSearch() {
       resultsSection.classList.remove("hidden");
       attachReserveListeners(booksGrid);
       attachTagListeners(booksGrid);
+      window._observeDescriptions?.(booksGrid);
     } else {
+      // Show empty state with AI suggest message using the searched query
       emptyState.classList.remove("hidden");
       setQuoteEl("emptyQuote");
+      const aiSuggestMsg = $("emptyAiSuggestMsg");
+      if (aiSuggestMsg) {
+        aiSuggestMsg.innerHTML = `🤖 <strong>WatsonX AI suggests:</strong> "${esc(query)}" wasn't found in our catalogue. Would you like to suggest it for acquisition?`;
+        aiSuggestMsg.classList.remove("hidden");
+        // Store last searched query so suggest button can pre-fill it
+        aiSuggestMsg.dataset.query = query;
+      }
     }
 
   } catch {
@@ -267,6 +276,7 @@ async function loadHomeBooks(genre = "all", force = false) {
     homeBooksGrid.innerHTML = (data.books || []).map((b, i) => renderPinCard(b, i)).join("");
     attachReserveListeners(homeBooksGrid);
     attachTagListeners(homeBooksGrid);
+    window._observeDescriptions?.(homeBooksGrid);
     _homeBooksGenreLoaded = genre;
   } catch {
     homeBooksLoading.classList.add("hidden");
@@ -300,10 +310,21 @@ function renderPinCard(book, index) {
   const copiesText = `${book.total_copies || 1} cop${(book.total_copies || 1) === 1 ? "y" : "ies"} total`;
   const quickInfo  = `<div class="pin-card__quick-info">${isbnText ? isbnText + " · " : ""}${copiesText}</div>`;
 
+  // Specialty badge (genre/subject shown always at bottom-right of image)
+  const specialtyLabel = primaryTag || (book.genre) || null;
+  const specialtyBadge = specialtyLabel
+    ? `<div class="pin-card__specialty-badge">${esc(specialtyLabel)}</div>` : "";
+
   // Book cover: coloured block with title + author overlaid
   const thumbCover = `
     <div class="pin-card__cover-title">${esc(book.title)}</div>
     <div class="pin-card__cover-author">${esc(book.author)}</div>`;
+
+  // Description — show if present, otherwise lazy-load via API
+  const descId  = `desc-${esc(book._id)}`;
+  const descHtml = book.description
+    ? `<p class="pin-card__desc" id="${descId}">${esc(book.description)}</p>`
+    : `<p class="pin-card__desc pin-card__desc--loading" id="${descId}" data-book-id="${esc(book._id)}" data-title="${esc(book.title)}" data-author="${esc(book.author)}">Loading description…</p>`;
 
   return `
     <article class="pin-card pin-card--${ratio}" role="listitem"
@@ -317,6 +338,7 @@ function renderPinCard(book, index) {
       <div class="pin-card__meta">
         <div class="pin-card__title">${esc(book.title)}</div>
         <div class="pin-card__author">${esc(book.author)}</div>
+        ${descHtml}
       </div>
       ${tags ? `<div class="pin-card__tags">${tags}</div>` : ""}
       <div class="pin-card__footer">
@@ -334,9 +356,65 @@ function renderPinCard(book, index) {
                 aria-label="Read &amp; write reviews">
           Reviews
         </button>
+        ${specialtyBadge}
       </div>
     </article>`;
 }
+
+// Lazy-load descriptions for cards that don't have one yet.
+// Uses IntersectionObserver so we only fetch when the card scrolls into view.
+(function setupDescriptionLazyLoader() {
+  const pending = new Map(); // bookId -> {el, title, author}
+  const fetching = new Set();
+
+  function fetchDesc(bookId, el) {
+    if (fetching.has(bookId)) return;
+    fetching.add(bookId);
+    fetch("/api/book-description", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ book_id: bookId }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.description) {
+          // Update all matching desc elements (card may appear in multiple grids)
+          document.querySelectorAll(`.pin-card__desc--loading[data-book-id="${bookId}"]`).forEach((e) => {
+            e.textContent = d.description;
+            e.classList.remove("pin-card__desc--loading");
+          });
+        } else {
+          document.querySelectorAll(`.pin-card__desc--loading[data-book-id="${bookId}"]`).forEach((e) => {
+            e.textContent = "";
+            e.classList.remove("pin-card__desc--loading");
+          });
+        }
+      })
+      .catch(() => {
+        document.querySelectorAll(`.pin-card__desc--loading[data-book-id="${bookId}"]`).forEach((e) => {
+          e.textContent = "";
+          e.classList.remove("pin-card__desc--loading");
+        });
+      });
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      const bookId = el.dataset.bookId;
+      if (bookId) {
+        fetchDesc(bookId, el);
+        observer.unobserve(el);
+      }
+    });
+  }, { rootMargin: "100px" });
+
+  // Called after any grid renders to start observing new lazy desc elements.
+  window._observeDescriptions = (container = document) => {
+    container.querySelectorAll(".pin-card__desc--loading").forEach((el) => observer.observe(el));
+  };
+})();
 
 function attachReserveListeners(container = document) {
   container.querySelectorAll(".btn-pin-action").forEach((btn) => {
@@ -810,9 +888,10 @@ window._onAuthSignIn = (user) => {
   const sid = sessionStorage.getItem("studentId") || user.displayName || "student";
   state.studentId = sid;
   studentIdInput.value = sid;
-  // Load homepage books and WRTD banner after sign-in
+  // Load homepage books, WRTD banner, and suggested books after sign-in
   loadHomeBooks("all");
   loadWRTD();
+  loadSuggestedBooks();
 };
 
 window._getStudentId = () => state.studentId;
@@ -825,6 +904,7 @@ window._getStudentId = () => state.studentId;
 if (sessionStorage.getItem("studentId")) {
   loadHomeBooks("all");
   loadWRTD();
+  loadSuggestedBooks();
 }
 
 // Populate all quote placeholders on load
@@ -832,9 +912,53 @@ setQuoteEl("emptyQuote");
 setQuoteEl("recsEmptyQuote");
 
 // =============================================================================
+// SUGGESTED BOOKS SECTION  — real books students suggested, not yet in catalogue
+// =============================================================================
+const suggestedSection = $("suggestedBooksSection");
+const suggestedGrid    = $("suggestedBooksGrid");
+const suggestedCount   = $("suggestedBooksCount");
+
+async function loadSuggestedBooks() {
+  if (!suggestedSection || !suggestedGrid) return;
+  try {
+    const res  = await fetch("/api/suggestions");
+    const data = await res.json();
+    if (!data.suggestions || data.suggestions.length === 0) {
+      suggestedSection.classList.add("hidden");
+      return;
+    }
+    suggestedCount.textContent = `${data.total} book${data.total !== 1 ? "s" : ""} suggested by students`;
+    suggestedGrid.innerHTML = data.suggestions.map((s, i) => {
+      const thumbClass = `pin-thumb--${i % 18}`;
+      return `
+        <article class="suggest-item" role="listitem">
+          <div class="suggest-item__thumb ${thumbClass}">
+            <div class="pin-card__cover-title">${esc(s.title)}</div>
+            <div class="pin-card__cover-author">${esc(s.author)}</div>
+          </div>
+          <div class="suggest-item__body">
+            <div class="suggest-item__title">${esc(s.title)}</div>
+            <div class="suggest-item__author">by ${esc(s.author)}</div>
+            ${s.description ? `<p class="suggest-item__desc">${esc(s.description)}</p>` : ""}
+            ${s.reason ? `<p class="suggest-item__reason">💬 "${esc(s.reason)}"</p>` : ""}
+          </div>
+          <button class="btn-secondary suggest-item__btn"
+                  onclick="openSuggestTab('${esc(s.title).replace(/'/g, "&#39;")}')">
+            Also Suggest
+          </button>
+        </article>`;
+    }).join("");
+    suggestedSection.classList.remove("hidden");
+  } catch {
+    // Non-critical — hide section silently
+    if (suggestedSection) suggestedSection.classList.add("hidden");
+  }
+}
+
+// =============================================================================
 // SUGGEST A BOOK BAR  — standalone button in clear space
 // =============================================================================
-function openSuggestTab() {
+function openSuggestTab(prefillTitle = "") {
   // Open chatbot panel on Suggest Book tab
   const panel = $("chatbotPanel");
   panel.classList.remove("hidden");
@@ -850,13 +974,25 @@ function openSuggestTab() {
   }
   $("chatbotSuggestForm").classList.remove("hidden");
   $("chatbotInputRow").classList.add("hidden");
+  // Pre-fill title if provided (e.g. from a failed search)
+  if (prefillTitle) {
+    const titleInput = $("suggestTitle");
+    if (titleInput) titleInput.value = prefillTitle;
+  }
 }
 
 const suggestBookBarBtn = $("suggestBookBarBtn");
-if (suggestBookBarBtn) suggestBookBarBtn.addEventListener("click", openSuggestTab);
+if (suggestBookBarBtn) suggestBookBarBtn.addEventListener("click", () => openSuggestTab());
 
 const emptyStateSuggestBtn = $("emptyStateSuggestBtn");
-if (emptyStateSuggestBtn) emptyStateSuggestBtn.addEventListener("click", openSuggestTab);
+if (emptyStateSuggestBtn) {
+  emptyStateSuggestBtn.addEventListener("click", () => {
+    // Pre-fill with the last searched query if available
+    const aiSuggestMsg = $("emptyAiSuggestMsg");
+    const prefill = aiSuggestMsg ? (aiSuggestMsg.dataset.query || "") : "";
+    openSuggestTab(prefill);
+  });
+}
 
 function hideResults() {
   nluInsights.classList.add("hidden");
@@ -865,6 +1001,12 @@ function hideResults() {
   emptyState.classList.add("hidden");
   loadingState.classList.add("hidden");
   homeBooksSection.classList.remove("hidden");
+  // Reset AI suggest message between searches
+  const aiSuggestMsg = $("emptyAiSuggestMsg");
+  if (aiSuggestMsg) {
+    aiSuggestMsg.classList.add("hidden");
+    delete aiSuggestMsg.dataset.query;
+  }
 }
 
 function setLoading(on) {
@@ -1029,6 +1171,7 @@ async function loadRecommendations(force = false) {
     histGrid.innerHTML = data.history.map((b, i) => renderPinCard(b, i)).join("");
     attachReserveListeners(histGrid);
     attachTagListeners(histGrid);
+    window._observeDescriptions?.(histGrid);
     histSec.classList.remove("hidden");
 
     // Show AI recommendation text

@@ -167,6 +167,16 @@
         <div id="homeBooksGrid" class="pin-grid" role="list"></div>
       </div>
 
+      <!-- Suggested Books section — real books students want, not yet in catalogue -->
+      <div id="suggestedBooksSection" class="suggested-section hidden">
+        <div class="suggested-section__header">
+          <h2 class="suggested-section__title">📚 Books Students Want</h2>
+          <p class="suggested-section__sub">Real published books suggested by students — not yet in our catalogue.</p>
+          <p id="suggestedBooksCount" class="results-count"></p>
+        </div>
+        <div id="suggestedBooksGrid" class="suggested-grid" role="list"></div>
+      </div>
+
       <!-- Suggest a Book standalone button -->
       <div class="suggest-book-bar" id="suggestBookBar">
         <span class="suggest-book-bar__text">Can't find what you're looking for?</span>
@@ -182,6 +192,8 @@
         <p class="state-card__title">No books found</p>
         <p class="state-card__sub">Try a different topic or use a subject filter above</p>
         <div class="lib-quote" id="emptyQuote"></div>
+        <!-- AI suggest message shown when a search yields no results -->
+        <div id="emptyAiSuggestMsg" class="empty-ai-suggest hidden"></div>
         <button class="btn-secondary" style="margin-top:12px" id="emptyStateSuggestBtn">📚 Suggest a Book to the Library</button>
       </div>
 
@@ -448,7 +460,7 @@
   </div>
 
   {{ firebase_config_script | safe }}
-  <script type="module" src="/js/auth.js" defer></script>
   <script src="/js/app.js" defer></script>
+  <script type="module" src="/js/auth.js"></script>
 </body>
 </html>

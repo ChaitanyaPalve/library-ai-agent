@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
@@ -66,6 +66,103 @@
     }
 
     .theme-toggle-wrap { position: fixed; top: 16px; right: 16px; }
+
+    /* Demo credential pills */
+    .demo-creds {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0 6px;
+      justify-content: center;
+    }
+    .demo-pill {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 8px 10px;
+      background: rgba(255,255,255,.7);
+      border: 1.5px solid #bfdbfe;
+      border-radius: var(--rounded-md);
+      cursor: pointer;
+      transition: background .15s, border-color .15s, transform .1s;
+      font-family: var(--font);
+    }
+    .demo-pill:hover { background: #fff; border-color: var(--color-primary); transform: translateY(-1px); }
+    .demo-pill:active { transform: translateY(0); }
+    .demo-pill__label { font-size: 11px; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: .04em; }
+    .demo-pill__id    { font-size: 12.5px; font-weight: 600; color: #1e293b; }
+    .demo-pill__pwd   { font-size: 11.5px; color: #475569; }
+    [data-theme="dark"] .demo-pill { background: rgba(59,130,246,.08); border-color: rgba(59,130,246,.25); }
+    [data-theme="dark"] .demo-pill__id  { color: #e2e8f0; }
+    [data-theme="dark"] .demo-pill__pwd { color: #94a3b8; }
+    .demo-hint-sub {
+      display: block;
+      font-size: 11.5px;
+      color: #3b82f6;
+      opacity: .8;
+      margin-top: 4px;
+    }
+
+    /* Register toggle */
+    .register-toggle-row {
+      text-align: center;
+      margin-top: 4px;
+    }
+    .register-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--color-primary);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: var(--rounded-sm);
+      transition: background .12s;
+    }
+    .register-toggle-btn:hover { background: var(--color-primary-subtle); }
+
+    /* Register panel (collapsed by default) */
+    .register-panel {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height .35s cubic-bezier(.16,1,.3,1), opacity .25s ease;
+      margin-top: 0;
+    }
+    .register-panel.open {
+      max-height: 480px;
+      opacity: 1;
+      margin-top: 8px;
+    }
+    .register-panel__title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-ink);
+      margin: 0 0 2px;
+    }
+    .register-panel__sub {
+      font-size: 12px;
+      color: var(--color-mute);
+      margin: 0 0 12px;
+      line-height: 1.5;
+    }
+    .register-success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+      border-radius: var(--rounded-md);
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    [data-theme="dark"] .register-success {
+      background: rgba(22,101,52,.15);
+      border-color: rgba(74,222,128,.25);
+      color: #86efac;
+    }
   </style>
 </head>
 <body>
@@ -101,9 +198,22 @@
         <p class="login-sub">website under upgradation stay tuned</p>
       </div>
 
+      <!-- Demo credential pills -->
       <div class="login-hint">
-        <strong>use these credentials:</strong><br>
-        Student ID: <strong>1234/edunet</strong> &nbsp;·&nbsp; Password: <strong>123456/edunet</strong>
+        <strong>Demo credentials</strong>
+        <div class="demo-creds">
+          <button type="button" class="demo-pill" data-id="1234" data-pwd="123456">
+            <span class="demo-pill__label">Student</span>
+            <span class="demo-pill__id">ID: 1234</span>
+            <span class="demo-pill__pwd">Pass: 123456</span>
+          </button>
+          <button type="button" class="demo-pill" data-id="edunet" data-pwd="edunet">
+            <span class="demo-pill__label">Edunet</span>
+            <span class="demo-pill__id">ID: edunet</span>
+            <span class="demo-pill__pwd">Pass: edunet</span>
+          </button>
+        </div>
+        <span class="demo-hint-sub">Click a card to auto-fill · or use your own ID below</span>
       </div>
 
       <div id="loginError" class="login-error hidden"></div>
@@ -112,20 +222,50 @@
         <div>
           <label class="field-label" for="loginStudentId">Student ID</label>
           <input id="loginStudentId" class="field-input" type="text"
-                 placeholder="e.g. 1234 or S00123"
+                 placeholder="e.g. 1234 or edunet"
                  autocomplete="username" required />
         </div>
         <div>
           <label class="field-label" for="loginPassword">Password</label>
           <input id="loginPassword" class="field-input" type="password"
-                 placeholder="Enter your password" autocomplete="current-password" required />
-        
-       
-          <button type="submit" class="btn-primary btn-primary--full" id="loginBtn">Sign in</button>
+                 placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn-primary btn-primary--full" id="loginBtn">Sign in</button>
       </form>
 
-      
-      <p class="login-footer">website will be back <strong>on 14th july stay tuned</strong></p>
+      <!-- Register your own Student ID -->
+      <div class="register-toggle-row">
+        <button type="button" class="register-toggle-btn" id="registerToggleBtn" aria-expanded="false">
+          ＋ Register your own Student ID
+        </button>
+      </div>
+
+      <div id="registerPanel" class="register-panel" aria-hidden="true">
+        <p class="register-panel__title">Create your Student account</p>
+        <p class="register-panel__sub">Pick any ID and password — they'll be saved for future logins on this device.</p>
+        <div id="registerError" class="login-error hidden"></div>
+        <div id="registerSuccess" class="register-success hidden"></div>
+        <form id="registerForm" class="login-form" novalidate>
+          <div>
+            <label class="field-label" for="regName">Your Name</label>
+            <input id="regName" class="field-input" type="text"
+                   placeholder="e.g. Aarav Shah" autocomplete="name" required />
+          </div>
+          <div>
+            <label class="field-label" for="regStudentId">Student ID</label>
+            <input id="regStudentId" class="field-input" type="text"
+                   placeholder="e.g. S00456 or palwe" autocomplete="off" required />
+          </div>
+          <div>
+            <label class="field-label" for="regPassword">Password</label>
+            <input id="regPassword" class="field-input" type="password"
+                   placeholder="Choose a password" autocomplete="new-password" required />
+          </div>
+          <button type="submit" class="btn-primary btn-primary--full" id="registerBtn">Create Account</button>
+        </form>
+      </div>
+
+      <p class="login-footer">Website will be back on <strong>14th July — stay tuned 🚀</strong></p>
     </div>
   </div>
 

@@ -5,7 +5,7 @@ Collections: books, students, queries, reservations
 
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import certifi
 from pymongo import MongoClient, ASCENDING, DESCENDING
@@ -83,7 +83,7 @@ def ensure_indexes():
 # ---------------------------------------------------------------------------
 
 def make_book(title: str, author: str, isbn: str, subject_tags: list[str],
-              total_copies: int = 1) -> dict:
+              total_copies: int = 1, description: str = "") -> dict:
     return {
         "title": title,
         "author": author,
@@ -92,6 +92,7 @@ def make_book(title: str, author: str, isbn: str, subject_tags: list[str],
         "total_copies": total_copies,
         "available_copies": total_copies,
         "demand_score": 0,          # incremented on each reservation/search hit
+        "description": description, # short blurb shown on the book card
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
@@ -108,7 +109,6 @@ def make_query(student_id: str, raw_text: str, matched_book_ids: list) -> dict:
 
 def make_reservation(student_id: str, book_id, status: str = "active") -> dict:
     now = datetime.utcnow()
-    from datetime import timedelta
     doc = {
         "student_id": student_id,
         "book_id": book_id,

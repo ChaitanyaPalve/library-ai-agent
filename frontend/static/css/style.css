@@ -612,6 +612,31 @@ body {
   border: 1px solid var(--color-hairline);
 }
 
+/* Specialty / genre badge — always-visible at bottom-right of footer */
+.pin-card__specialty-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--rounded-full);
+  border: 1px solid var(--color-primary-border);
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: auto;
+}
+[data-theme="dark"] .pin-card__specialty-badge {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.30);
+}
+
 /* Availability + action row */
 .pin-card__footer {
   padding: var(--space-xs) var(--space-md) var(--space-md);
@@ -685,6 +710,26 @@ body {
   font-size: 14px;
   font-weight: 400;
   color: var(--color-mute);
+}
+
+/* AI suggest message in empty state */
+.empty-ai-suggest {
+  max-width: 420px;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--rounded-md);
+  font-size: 13px;
+  color: var(--color-body);
+  line-height: 1.55;
+  text-align: center;
+}
+.empty-ai-suggest strong {
+  color: var(--color-primary);
+}
+[data-theme="dark"] .empty-ai-suggest {
+  background: rgba(59, 130, 246, 0.10);
+  border-color: rgba(59, 130, 246, 0.25);
 }
 
 /* Spinner — ring + book icon */
@@ -2585,3 +2630,85 @@ body {
   }
   .chatbot-fab { bottom: 20px; right: 16px; }
 }
+
+/* =============================================================================
+   BOOK CARD DESCRIPTION
+   ============================================================================= */
+
+.pin-card__desc {
+  font-size: 12px;
+  color: var(--color-mute);
+  line-height: 1.45;
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pin-card__desc--loading {
+  color: var(--color-ash);
+  font-style: italic;
+}
+
+/* =============================================================================
+   SUGGESTED BOOKS SECTION
+   ============================================================================= */
+
+.suggested-section {
+  margin: var(--space-xl) 0;
+  padding: var(--space-lg) var(--space-xl);
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-lg);
+}
+.suggested-section__header { margin-bottom: var(--space-md); }
+.suggested-section__title  { font-size: 18px; font-weight: 700; color: var(--color-ink); margin: 0 0 4px; }
+.suggested-section__sub    { font-size: 13px; color: var(--color-mute); margin: 0 0 6px; }
+
+.suggested-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.suggest-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  padding: 14px;
+}
+.suggest-item__thumb {
+  flex-shrink: 0;
+  width: 64px;
+  height: 88px;
+  border-radius: var(--rounded-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 6px;
+}
+.suggest-item__thumb .pin-card__cover-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  line-height: 1.3;
+  word-break: break-word;
+}
+.suggest-item__thumb .pin-card__cover-author {
+  font-size: 9px;
+  color: rgba(255,255,255,.75);
+  text-align: center;
+  margin-top: 3px;
+}
+.suggest-item__body  { flex: 1; min-width: 0; }
+.suggest-item__title { font-size: 14px; font-weight: 600; color: var(--color-ink); }
+.suggest-item__author { font-size: 12px; color: var(--color-mute); margin-top: 2px; }
+.suggest-item__desc  { font-size: 12.5px; color: var(--color-body); margin: 5px 0 0; line-height: 1.5; }
+.suggest-item__reason { font-size: 12px; color: var(--color-mute); font-style: italic; margin: 4px 0 0; }
+.suggest-item__btn   { flex-shrink: 0; align-self: center; font-size: 12px; padding: 5px 12px; }

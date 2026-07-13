@@ -105,6 +105,22 @@ Mode: {mode}
 Rules:
 - If mode is "mood" or "interest": suggest 3–5 books that match the user's mood, emotion, or topic interest.
   Format each as:  • "<Title>" by <Author> — <one-line reason>
+  Prioritise well-known titles the library is likely to stock, such as:
+  The Midnight Library, A Man Called Ove, The Perks of Being a Wallflower, The Body Keeps the Score,
+  Reasons to Stay Alive, Atomic Habits, The Subtle Art of Not Giving a F*ck, The Power of Now,
+  Man's Search for Meaning, Sapiens, Thinking Fast and Slow, The Alchemist, Meditations,
+  The Lord of the Rings, Harry Potter and the Philosopher's Stone, A Game of Thrones,
+  The Martian, Project Hail Mary, The Three-Body Problem, Ready Player One, Foundation,
+  Gone Girl, The Silent Patient, The Girl with the Dragon Tattoo, The Da Vinci Code,
+  The Hunger Games, Wonder, The Catcher in the Rye, The Giver,
+  Pride and Prejudice, Normal People, The Notebook, It Ends with Us, Beach Read,
+  Educated, Born a Crime, Sapiens, Homo Deus, Guns Germs and Steel,
+  Shoe Dog, The Power of Habit, Deep Work, Atomic Habits, Rich Dad Poor Dad,
+  The Midnight Library, Norwegian Wood, Eleanor & Park, A Little Life,
+  The Book Thief, Tuesdays with Morrie, Milk and Honey, The Prophet,
+  Good Omens, Eleanor Oliphant is Completely Fine, The 100-Year-Old Man,
+  Sophie's World, Siddhartha, The Stranger, Crime and Punishment,
+  The Obstacle Is the Way, The Four Agreements, Eat Pray Love.
 - If mode is "suggest": the user wants to suggest a book for the library to acquire.
   Acknowledge the suggestion warmly, confirm the title/author if mentioned, and explain the library will review it.
 - If mode is "query": the user has a general library question (hours, policies, fines, procedures, etc.).
@@ -125,6 +141,16 @@ Write a warm 2-sentence acknowledgement confirming the suggestion has been recor
 and that the library team will review it for acquisition.
 
 Response:"""
+
+_BOOK_DESCRIPTION_PROMPT = """Give a 1-sentence description of the book "{title}" by {author}.
+State what it is about and who it is for. No preamble, no quotes around the sentence.
+
+Description:"""
+
+_SUGGEST_VERIFY_PROMPT = """Is "{title}" by {author} a real published book?
+Reply with only YES or NO.
+
+Answer:"""
 
 
 # ---------------------------------------------------------------------------
@@ -196,3 +222,29 @@ def generate_suggest_book_reply(title: str, author: str, reason: str) -> str:
     prompt = _SUGGEST_BOOK_PROMPT.format(title=title, author=author, reason=reason)
     result = model.generate_text(prompt=prompt)
     return result.strip() if isinstance(result, str) else result
+
+
+def generate_book_description(title: str, author: str) -> str:
+    """Return a one-sentence description for a book (token-efficient)."""
+    model = _get_model()
+    prompt = _BOOK_DESCRIPTION_PROMPT.format(title=title, author=author)
+    # Use a small token budget — one sentence is enough
+    from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GP
+    result = model.generate_text(
+        prompt=prompt,
+        params={GP.MAX_NEW_TOKENS: 60, GP.MIN_NEW_TOKENS: 10, GP.TEMPERATURE: 0.3},
+    )
+    return (result.strip() if isinstance(result, str) else result) or ""
+
+
+def verify_book_is_real(title: str, author: str) -> bool:
+    """Ask the model whether the book title/author combination is a real book."""
+    model = _get_model()
+    prompt = _SUGGEST_VERIFY_PROMPT.format(title=title, author=author)
+    from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GP
+    result = model.generate_text(
+        prompt=prompt,
+        params={GP.MAX_NEW_TOKENS: 5, GP.MIN_NEW_TOKENS: 1, GP.TEMPERATURE: 0.0},
+    )
+    answer = (result.strip() if isinstance(result, str) else result).upper()
+    return answer.startswith("YES")
