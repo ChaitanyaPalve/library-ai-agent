@@ -29,6 +29,7 @@ from backend.services.library_lms  import (
     log_query, get_high_demand_books, get_all_books,
     validate_student_id, upsert_student,
     add_review, get_reviews, get_reading_history, get_reading_log,
+    reset_book_availability,
 )
 from backend.automation.robo_rules import run_all_rules
 from backend.models.db import get_db, get_client
@@ -374,6 +375,23 @@ def persist_student():
 
     doc = upsert_student(student_id, firebase_uid, email)
     return jsonify(doc), 200
+
+
+# ---------------------------------------------------------------------------
+# Admin utilities
+# ---------------------------------------------------------------------------
+
+@api.route("/admin/reset-books", methods=["POST"])
+def admin_reset_books():
+    """
+    POST /api/admin/reset-books
+    Resets available_copies = total_copies for every book in the catalogue.
+    Useful when books get stuck at 0 copies after testing/reservations.
+    No auth guard — this is a demo app.
+    """
+    count = reset_book_availability()
+    return jsonify({"ok": True, "books_reset": count,
+                    "message": f"Reset availability for {count} book(s). All books are now issuable."}), 200
 
 
 @api.route("/automation/run", methods=["GET"])

@@ -809,6 +809,35 @@ runRoboBtn.addEventListener("click", async () => {
   }
 });
 
+// Reset book availability button
+const resetBooksBtn = $("resetBooksBtn");
+const resetBooksMsg = $("resetBooksMsg");
+if (resetBooksBtn) {
+  resetBooksBtn.addEventListener("click", async () => {
+    resetBooksBtn.disabled = true;
+    resetBooksBtn.textContent = "Resetting…";
+    try {
+      const res  = await fetch("/api/admin/reset-books", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        resetBooksMsg.textContent = `✅ ${data.message}`;
+        resetBooksMsg.style.color = "var(--color-success, #166534)";
+        showToast(data.message);
+        // Reload home books so availability badges update immediately
+        _homeBooksGenreLoaded = "";
+        loadHomeBooks(state.homeGenre, true);
+      } else {
+        showToast("Reset failed.", true);
+      }
+    } catch {
+      showToast("Reset request failed. Check server connection.", true);
+    } finally {
+      resetBooksBtn.disabled = false;
+      resetBooksBtn.textContent = "🔄 Reset Book Availability";
+    }
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Orchestration status
 // ─────────────────────────────────────────────────────────────────────────────

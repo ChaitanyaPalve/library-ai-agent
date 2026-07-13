@@ -1051,9 +1051,26 @@ SAMPLE_BOOKS = (
 )
 
 
-def seed():
+def reset_availability():
+    """
+    Reset available_copies = total_copies for EVERY book in the catalogue.
+    Run this whenever books appear stuck as 'Unavailable' after testing.
+    """
+    db = get_db()
+    result = db.books.update_many(
+        {},
+        [{"$set": {"available_copies": "$total_copies"}}],
+    )
+    print(f"Reset availability: {result.modified_count} books updated.")
+
+
+def seed(reset=False):
     db = get_db()
     ensure_indexes()
+
+    if reset:
+        print("Resetting available_copies for all existing books…")
+        reset_availability()
 
     inserted = 0
     skipped  = 0
@@ -1064,13 +1081,26 @@ def seed():
             print(f"  + {book['title']}")
         except Exception as e:
             if "duplicate" in str(e).lower() or "E11000" in str(e):
+                # Book already exists — update available_copies back to total_copies
+                db.books.update_one(
+                    {"isbn": book["isbn"]},
+                    {"$set": {
+                        "available_copies": book["total_copies"],
+                        "subject_tags": book["subject_tags"],
+                    }},
+                )
                 skipped += 1
-                print(f"  - {book['title']} (already exists)")
+                print(f"  ~ {book['title']} (exists — availability restored)")
             else:
                 print(f"  x {book['title']}: {e}")
 
-    print(f"\nDone. {inserted} inserted, {skipped} skipped.")
+    print(f"\nDone. {inserted} inserted, {skipped} refreshed.")
 
 
 if __name__ == "__main__":
-    seed()
+    import argparse
+    parser = argparse.ArgumentParser(description="Seed / reset the library database.")
+    parser.add_argument("--reset", action="store_true",
+                        help="Reset available_copies=total_copies for all books before seeding")
+    args = parser.parse_args()
+    seed(reset=args.reset)

@@ -458,3 +458,17 @@ def get_all_books(skip: int = 0, limit: int = 50, subject: str | None = None) ->
         doc["_id"] = str(doc["_id"])
         results.append(doc)
     return results
+
+
+def reset_book_availability() -> int:
+    """
+    Reset available_copies = total_copies for every book.
+    Returns the number of documents modified.
+    Called from /api/admin/reset-books and seed_db.py --reset.
+    """
+    db = get_db()
+    result = db.books.update_many(
+        {},
+        [{"$set": {"available_copies": "$total_copies"}}],
+    )
+    return result.modified_count
