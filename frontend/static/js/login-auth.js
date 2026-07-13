@@ -157,20 +157,40 @@ if (isConfigured) {
         return;
       }
 
-      // Fallback to Firebase email/password
+      // Fallback to Firebase email/password (@library.local)
       const email = sid.toLowerCase() + "@library.local";
-      await signInWithEmailAndPassword(auth, email, pwd);
-      sessionStorage.setItem("studentId", sid);
-      window.location.replace("/");
-    } catch (err) {
-      const map = {
-        "auth/user-not-found":     "No account found for that Student ID.",
-        "auth/wrong-password":     "Incorrect password.",
-        "auth/too-many-requests":  "Too many attempts. Please wait a moment.",
-        "auth/invalid-credential": "Invalid Student ID or password.",
-        "auth/invalid-email":      "Invalid Student ID format.",
-      };
-      showError(loginError, map[err.code] || `Error: ${err.code}`);
+      try {
+        await signInWithEmailAndPassword(auth, email, pwd);
+        sessionStorage.setItem("studentId", sid);
+        localStorage.setItem("libStudentId", sid);
+        window.location.replace("/");
+        return;
+      } catch (fbErr) {
+        // Firebase failed — try localStorage as a last resort
+        // (covers users whose Firebase account creation silently failed at registration)
+        const users = getUsers();
+        if (users[sid]) {
+          const hash = await sha256(pwd);
+          if (hash === users[sid].passwordHash) {
+            sessionStorage.setItem("studentId", sid);
+            sessionStorage.setItem("demoUser", "1");
+            localStorage.setItem("libStudentId", sid);
+            localStorage.setItem("libDemoUser", "1");
+            window.location.replace("/");
+            return;
+          }
+          showError(loginError, "Incorrect password.");
+          return;
+        }
+        const map = {
+          "auth/user-not-found":     "No account found for that Student ID. Please register below.",
+          "auth/wrong-password":     "Incorrect password.",
+          "auth/too-many-requests":  "Too many attempts. Please wait a moment.",
+          "auth/invalid-credential": "Invalid Student ID or password.",
+          "auth/invalid-email":      "Invalid Student ID format.",
+        };
+        showError(loginError, map[fbErr.code] || `Error: ${fbErr.code}`);
+      }
     } finally {
       loginBtn.disabled    = false;
       loginBtn.textContent = "Sign in";
