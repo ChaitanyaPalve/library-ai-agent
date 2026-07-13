@@ -128,7 +128,11 @@ function switchPanel(panelName) {
 }
 
 $("navResBtn").addEventListener("click",   () => switchPanel("reservations"));
-$("navRecsBtn").addEventListener("click",  () => { switchPanel("recommendations"); loadRecommendations(); });
+$("navRecsBtn").addEventListener("click",  () => {
+  switchPanel("recommendations");
+  loadRecommendations();
+  loadAIPicks(recsAiPicksSect, recsAiPicksGrid, recsAiPicksLoad);
+});
 $("navDashBtn").addEventListener("click",  () => switchPanel("dashboard"));
 $("homeBtn").addEventListener("click", (e) => { e.preventDefault(); switchPanel("search"); });
 
@@ -323,7 +327,12 @@ function renderPinCard(book, index) {
     ? `<div class="pin-card__specialty-badge">${esc(specialtyLabel)}</div>` : "";
 
   // Book cover: coloured block with title + author overlaid
+  const coverDescId = `cover-desc-${esc(book._id)}`;
+  const coverDesc = book.description
+    ? `<div class="pin-card__cover-desc" id="${coverDescId}">${esc(book.description)}</div>`
+    : `<div class="pin-card__cover-desc pin-card__cover-desc--loading" id="${coverDescId}" data-book-id="${esc(book._id)}"></div>`;
   const thumbCover = `
+    ${coverDesc}
     <div class="pin-card__cover-title">${esc(book.title)}</div>
     <div class="pin-card__cover-author">${esc(book.author)}</div>`;
 
@@ -384,23 +393,16 @@ function renderPinCard(book, index) {
     })
       .then((r) => r.json())
       .then((d) => {
-        if (d.description) {
-          // Update all matching desc elements (card may appear in multiple grids)
-          document.querySelectorAll(`.pin-card__desc--loading[data-book-id="${bookId}"]`).forEach((e) => {
-            e.textContent = d.description;
-            e.classList.remove("pin-card__desc--loading");
-          });
-        } else {
-          document.querySelectorAll(`.pin-card__desc--loading[data-book-id="${bookId}"]`).forEach((e) => {
-            e.textContent = "";
-            e.classList.remove("pin-card__desc--loading");
-          });
-        }
+        const text = d.description || "";
+        document.querySelectorAll(`[data-book-id="${bookId}"]`).forEach((e) => {
+          e.textContent = text;
+          e.classList.remove("pin-card__desc--loading", "pin-card__cover-desc--loading");
+        });
       })
       .catch(() => {
-        document.querySelectorAll(`.pin-card__desc--loading[data-book-id="${bookId}"]`).forEach((e) => {
+        document.querySelectorAll(`[data-book-id="${bookId}"]`).forEach((e) => {
           e.textContent = "";
-          e.classList.remove("pin-card__desc--loading");
+          e.classList.remove("pin-card__desc--loading", "pin-card__cover-desc--loading");
         });
       });
   }
@@ -419,7 +421,7 @@ function renderPinCard(book, index) {
 
   // Called after any grid renders to start observing new lazy desc elements.
   window._observeDescriptions = (container = document) => {
-    container.querySelectorAll(".pin-card__desc--loading").forEach((el) => observer.observe(el));
+    container.querySelectorAll(".pin-card__desc--loading, .pin-card__cover-desc--loading").forEach((el) => observer.observe(el));
   };
 })();
 
@@ -838,6 +840,35 @@ if (resetBooksBtn) {
   });
 }
 
+// Seed full catalogue button
+const seedBooksBtn = $("seedBooksBtn");
+const seedBooksMsg = $("seedBooksMsg");
+if (seedBooksBtn) {
+  seedBooksBtn.addEventListener("click", async () => {
+    seedBooksBtn.disabled = true;
+    seedBooksBtn.textContent = "Seeding…";
+    try {
+      const res  = await fetch("/api/admin/seed-books", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        seedBooksMsg.textContent = `✅ ${data.message}`;
+        seedBooksMsg.style.color = "var(--color-success, #166534)";
+        showToast(data.message);
+        // Reload home books so newly seeded titles appear immediately
+        _homeBooksGenreLoaded = "";
+        loadHomeBooks(state.homeGenre, true);
+      } else {
+        showToast("Seeding failed.", true);
+      }
+    } catch {
+      showToast("Seed request failed. Check server connection.", true);
+    } finally {
+      seedBooksBtn.disabled = false;
+      seedBooksBtn.textContent = "📚 Seed Full Catalogue";
+    }
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Orchestration status
 // ─────────────────────────────────────────────────────────────────────────────
@@ -924,10 +955,11 @@ window._onAuthSignIn = (user) => {
   const sid = sessionStorage.getItem("studentId") || user.displayName || "student";
   state.studentId = sid;
   studentIdInput.value = sid;
-  // Load homepage books, WRTD banner, and suggested books after sign-in
+  // Load homepage books, WRTD banner, suggested books and AI picks after sign-in
   loadHomeBooks("all");
   loadWRTD();
   loadSuggestedBooks();
+  loadAIPicks(aiPicksSection, aiPicksGrid, aiPicksLoading);
 };
 
 window._getStudentId = () => state.studentId;
@@ -941,6 +973,7 @@ if (sessionStorage.getItem("studentId")) {
   loadHomeBooks("all");
   loadWRTD();
   loadSuggestedBooks();
+  loadAIPicks(aiPicksSection, aiPicksGrid, aiPicksLoading);
 }
 
 // Populate all quote placeholders on load
@@ -1221,6 +1254,76 @@ async function loadRecommendations(force = false) {
 }
 
 // =============================================================================
+// AI PICKS  (WatsonX AI — random catalogue books with blurbs)
+// =============================================================================
+
+const aiPicksSection   = $("aiPicksSection");
+const aiPicksGrid      = $("aiPicksGrid");
+const aiPicksLoading   = $("aiPicksLoading");
+const aiPicksRefresh   = $("aiPicksRefresh");
+const recsAiPicksSect  = $("recsAiPicksSection");
+const recsAiPicksGrid  = $("recsAiPicksGrid");
+const recsAiPicksLoad  = $("recsAiPicksLoading");
+const recsAiPicksRefr  = $("recsAiPicksRefresh");
+
+const THUMB_CLASSES = Array.from({length: 18}, (_, i) => `pin-thumb--${i}`);
+
+function renderAiPickCard(book, index) {
+  const avail      = book.available_copies > 0;
+  const thumbClass = THUMB_CLASSES[index % THUMB_CLASSES.length];
+  return `
+    <article class="ai-pick-card" role="listitem">
+      <div class="ai-pick-card__thumb ${thumbClass}">
+        <span class="ai-pick-card__badge">✦ AI Pick</span>
+        <div class="ai-pick-card__cover-title">${esc(book.title)}</div>
+        <div class="ai-pick-card__cover-author">${esc(book.author)}</div>
+      </div>
+      <div class="ai-pick-card__body">
+        <p class="ai-pick-card__blurb">${esc(book.ai_blurb || book.description || "")}</p>
+        <div class="ai-pick-card__footer">
+          <span class="ai-pick-card__avail ai-pick-card__avail--${avail ? "yes" : "no"}">
+            ${avail ? `${book.available_copies} available` : "Waitlist"}
+          </span>
+          <button class="btn-pin-action ai-pick-card__btn${avail ? "" : " btn-pin-action--waitlist"}"
+                  data-id="${esc(book._id)}"
+                  data-title="${esc(book.title)}"
+                  data-author="${esc(book.author)}"
+                  data-avail="${avail}">
+            ${avail ? "Issue" : "Waitlist"}
+          </button>
+        </div>
+      </div>
+    </article>`;
+}
+
+async function loadAIPicks(targetSection, targetGrid, targetLoading, count = 6) {
+  if (!targetSection || !targetGrid) return;
+  targetSection.classList.add("hidden");
+  targetLoading.classList.remove("hidden");
+  try {
+    const res  = await fetch(`/api/ai-picks?count=${count}`);
+    const data = await res.json();
+    targetLoading.classList.add("hidden");
+    if (!data.picks || data.picks.length === 0) return;
+    targetGrid.innerHTML = data.picks.map((b, i) => renderAiPickCard(b, i)).join("");
+    attachReserveListeners(targetGrid);
+    targetSection.classList.remove("hidden");
+  } catch {
+    targetLoading.classList.add("hidden");
+  }
+}
+
+// Refresh buttons
+if (aiPicksRefresh) {
+  aiPicksRefresh.addEventListener("click", () =>
+    loadAIPicks(aiPicksSection, aiPicksGrid, aiPicksLoading));
+}
+if (recsAiPicksRefr) {
+  recsAiPicksRefr.addEventListener("click", () =>
+    loadAIPicks(recsAiPicksSect, recsAiPicksGrid, recsAiPicksLoad));
+}
+
+// =============================================================================
 // WHAT TO READ TODAY  (WatsonX AI — homepage banner)
 // =============================================================================
 
@@ -1292,6 +1395,7 @@ async function loadWRTD(force = false) {
 $("wrtdBtn").addEventListener("click", () => {
   switchPanel("recommendations");
   loadRecommendations();
+  loadAIPicks(recsAiPicksSect, recsAiPicksGrid, recsAiPicksLoad);
 });
 
 
