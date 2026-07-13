@@ -186,10 +186,68 @@ function setHomeGenre(genre) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Pagination constant (shared by search + home books)
+// ─────────────────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 30;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Search
 // ─────────────────────────────────────────────────────────────────────────────
 searchBtn.addEventListener("click", doSearch);
 queryInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+
+// Search results pagination state
+let _searchBooksAll = [];
+let _searchBooksPage = 1;
+
+function _renderSearchPage(page) {
+  _searchBooksPage = page;
+  const start = (page - 1) * PAGE_SIZE;
+  const slice = _searchBooksAll.slice(start, start + PAGE_SIZE);
+  const total = _searchBooksAll.length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  resultsTitle.textContent =
+    `${total} book${total !== 1 ? "s" : ""} found · Page ${page} of ${totalPages}`;
+
+  booksGrid.innerHTML = slice.map((b, i) => renderPinCard(b, start + i)).join("");
+  attachReserveListeners(booksGrid);
+  attachTagListeners(booksGrid);
+  window._observeDescriptions?.(booksGrid);
+
+  // Inject pagination after booksGrid
+  let pagEl = document.getElementById("searchPagination");
+  if (!pagEl) {
+    pagEl = document.createElement("div");
+    pagEl.id = "searchPagination";
+    pagEl.className = "pagination";
+    resultsSection.appendChild(pagEl);
+  }
+  if (totalPages <= 1) { pagEl.innerHTML = ""; return; }
+
+  const visible = new Set([1, totalPages]);
+  for (let p = Math.max(1, page - 2); p <= Math.min(totalPages, page + 2); p++) visible.add(p);
+  const sorted = [...visible].sort((a, b) => a - b);
+  let html = "", prev = 0;
+  for (const p of sorted) {
+    if (p - prev > 1) html += `<span class="pagination__ellipsis">…</span>`;
+    html += `<button class="pagination__btn${p === page ? " pagination__btn--active" : ""}" data-page="${p}">${p}</button>`;
+    prev = p;
+  }
+  pagEl.innerHTML =
+    `<button class="pagination__btn pagination__btn--nav" data-page="${page - 1}"${page === 1 ? " disabled" : ""}>‹</button>` +
+    html +
+    `<button class="pagination__btn pagination__btn--nav" data-page="${page + 1}"${page === totalPages ? " disabled" : ""}>›</button>`;
+  pagEl.querySelectorAll(".pagination__btn[data-page]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const p = parseInt(btn.dataset.page, 10);
+      if (!isNaN(p) && p >= 1 && p <= totalPages) {
+        _renderSearchPage(p);
+        resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+}
 
 async function doSearch() {
   const query = queryInput.value.trim();
@@ -224,12 +282,9 @@ async function doSearch() {
     }
 
     if (data.books && data.books.length > 0) {
-      resultsTitle.textContent = `${data.total} book${data.total !== 1 ? "s" : ""} found`;
-      booksGrid.innerHTML = data.books.map((b, i) => renderPinCard(b, i)).join("");
+      _searchBooksAll = data.books;
       resultsSection.classList.remove("hidden");
-      attachReserveListeners(booksGrid);
-      attachTagListeners(booksGrid);
-      window._observeDescriptions?.(booksGrid);
+      _renderSearchPage(1);
     } else {
       // Show empty state with AI suggest message using the searched query
       emptyState.classList.remove("hidden");
@@ -250,9 +305,11 @@ async function doSearch() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Home books loader (replaces old All Books panel)
+// Home books loader  — paginated, 30 per page
 // ─────────────────────────────────────────────────────────────────────────────
 let _homeBooksGenreLoaded = "";
+let _homeBooksAll = [];       // full fetched list
+let _homeBooksPage = 1;       // current page (1-based)
 
 // Tracks whether a seed/refresh has already been triggered this session
 // so we don't loop infinitely if a genre genuinely has 0 books after refresh.
@@ -264,6 +321,67 @@ async function _refreshCatalogue() {
   try {
     await fetch("/api/admin/seed-books", { method: "POST" });
   } catch { /* silent — best effort */ }
+}
+
+function _renderHomePage(page) {
+  _homeBooksPage = page;
+  const start = (page - 1) * PAGE_SIZE;
+  const slice = _homeBooksAll.slice(start, start + PAGE_SIZE);
+  const total = _homeBooksAll.length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  homeBooksCount.textContent =
+    `${total} book${total !== 1 ? "s" : ""} · Page ${page} of ${totalPages}`;
+
+  homeBooksGrid.innerHTML = slice.map((b, i) => renderPinCard(b, start + i)).join("");
+  attachReserveListeners(homeBooksGrid);
+  attachTagListeners(homeBooksGrid);
+  window._observeDescriptions?.(homeBooksGrid);
+
+  // Render pagination below grid
+  _renderPagination("homePagination", totalPages, page, _renderHomePage);
+}
+
+function _renderPagination(containerId, totalPages, currentPage, onPageClick) {
+  let el = document.getElementById(containerId);
+  if (!el) {
+    el = document.createElement("div");
+    el.id = containerId;
+    el.className = "pagination";
+    homeBooksSection.appendChild(el);
+  }
+  if (totalPages <= 1) { el.innerHTML = ""; return; }
+
+  const pages = [];
+  // Always show first, last, current ±2
+  const visible = new Set([1, totalPages]);
+  for (let p = Math.max(1, currentPage - 2); p <= Math.min(totalPages, currentPage + 2); p++) {
+    visible.add(p);
+  }
+  const sorted = [...visible].sort((a, b) => a - b);
+
+  let html = "";
+  let prev = 0;
+  for (const p of sorted) {
+    if (p - prev > 1) html += `<span class="pagination__ellipsis">…</span>`;
+    html += `<button class="pagination__btn${p === currentPage ? " pagination__btn--active" : ""}" data-page="${p}">${p}</button>`;
+    prev = p;
+  }
+
+  el.innerHTML =
+    `<button class="pagination__btn pagination__btn--nav" data-page="${currentPage - 1}"${currentPage === 1 ? " disabled" : ""}>‹</button>` +
+    html +
+    `<button class="pagination__btn pagination__btn--nav" data-page="${currentPage + 1}"${currentPage === totalPages ? " disabled" : ""}>›</button>`;
+
+  el.querySelectorAll(".pagination__btn[data-page]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const p = parseInt(btn.dataset.page, 10);
+      if (!isNaN(p) && p >= 1 && p <= totalPages) {
+        onPageClick(p);
+        homeBooksSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
 }
 
 async function loadHomeBooks(genre = "all", force = false) {
@@ -279,6 +397,9 @@ async function loadHomeBooks(genre = "all", force = false) {
   homeBooksLoading.classList.remove("hidden");
   homeBooksCount.textContent = "";
   homeBooksSection.classList.remove("hidden");
+  // Clear old pagination
+  const oldPag = document.getElementById("homePagination");
+  if (oldPag) oldPag.innerHTML = "";
 
   try {
     let url;
@@ -306,13 +427,9 @@ async function loadHomeBooks(genre = "all", force = false) {
 
     homeBooksLoading.classList.add("hidden");
 
-    const books = data.books || [];
-    homeBooksCount.textContent = `${books.length} book${books.length !== 1 ? "s" : ""}`;
-    homeBooksGrid.innerHTML = books.map((b, i) => renderPinCard(b, i)).join("");
-    attachReserveListeners(homeBooksGrid);
-    attachTagListeners(homeBooksGrid);
-    window._observeDescriptions?.(homeBooksGrid);
+    _homeBooksAll = data.books || [];
     _homeBooksGenreLoaded = genre;
+    _renderHomePage(1);
   } catch (err) {
     homeBooksLoading.classList.add("hidden");
     console.error("[loadHomeBooks]", err);
@@ -768,15 +885,43 @@ async function returnBook(resId) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Dashboard panel (lazy — only fetches when first opened)
 // ─────────────────────────────────────────────────────────────────────────────
-let _dashboardLoaded = false;
-
 async function loadDashboard() {
   loadOrchStatus();
   loadExplain();
 
-  if (_dashboardLoaded) return;
   highDemandList.innerHTML   = `<p style="color:var(--color-ash);font-size:13px">Loading…</p>`;
   automationAlerts.innerHTML = `<p style="color:var(--color-ash);font-size:13px">Loading…</p>`;
+
+  // Render catalogue stat cards
+  const statsEl = $("dashboardStats");
+  if (statsEl) {
+    statsEl.innerHTML = `<p class="dash-stat-loading">Loading stats…</p>`;
+    try {
+      const booksRes = await fetch("/api/books?count=1");
+      const booksData = await booksRes.json();
+      const totalBooks = booksData.total || 0;
+
+      const hdRes = await fetch("/api/books/high-demand?threshold=5&limit=100");
+      const hdData = await hdRes.json();
+      const hdCount = hdData.total || 0;
+
+      statsEl.innerHTML = `
+        <div class="dash-stat-card">
+          <div class="dash-stat-card__value">${totalBooks}</div>
+          <div class="dash-stat-card__label">Books in Catalogue</div>
+        </div>
+        <div class="dash-stat-card">
+          <div class="dash-stat-card__value">${hdCount}</div>
+          <div class="dash-stat-card__label">High-Demand Titles</div>
+        </div>
+        <div class="dash-stat-card">
+          <div class="dash-stat-card__value">${Math.ceil(totalBooks / 30)}</div>
+          <div class="dash-stat-card__label">Pages at 30/page</div>
+        </div>`;
+    } catch {
+      statsEl.innerHTML = "";
+    }
+  }
 
   try {
     const [demandRes, alertsRes] = await Promise.all([
@@ -808,8 +953,6 @@ async function loadDashboard() {
     } else {
       automationAlerts.innerHTML = `<p style="color:var(--color-ash);font-size:13px">No alerts yet. Run Robo Rules to scan the database.</p>`;
     }
-
-    _dashboardLoaded = true;
   } catch {
     showToast("Dashboard failed to load.", true);
   }
@@ -826,7 +969,6 @@ runRoboBtn.addEventListener("click", async () => {
       `${data.expired_reservations.length} expired, ` +
       `${data.low_stock_reorders.length} reorder alerts.`
     );
-    _dashboardLoaded = false;   // Force refresh on next open
     loadDashboard();
   } catch {
     showToast("Automation run failed.", true);
