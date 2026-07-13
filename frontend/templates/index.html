@@ -524,9 +524,9 @@
 
     <!-- Suggest-book form (visible only in suggest mode) -->
     <div id="chatbotSuggestForm" class="chatbot-suggest-form hidden">
-      <input id="suggestTitle"  class="chatbot-suggest-input" placeholder="Book title *" autocomplete="off"/>
-      <input id="suggestAuthor" class="chatbot-suggest-input" placeholder="Author (optional)" autocomplete="off"/>
-      <textarea id="suggestReason" class="chatbot-suggest-textarea" placeholder="Why should we add it? (optional)" rows="2"></textarea>
+      <input id="suggestTitle"  class="chatbot-suggest-input" placeholder="Book title *" autocomplete="off" maxlength="200"/>
+      <input id="suggestAuthor" class="chatbot-suggest-input" placeholder="Author (optional)" autocomplete="off" maxlength="100"/>
+      <textarea id="suggestReason" class="chatbot-suggest-textarea" placeholder="Why should we add it? (optional)" rows="2" maxlength="400"></textarea>
       <button id="suggestSubmitBtn" class="btn-primary chatbot-suggest-submit">Submit Suggestion</button>
     </div>
 
