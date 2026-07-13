@@ -21,6 +21,7 @@ from backend.services.watson_nlu   import analyse_query, analyse_sentiment
 from backend.services.watsonx_ai   import (
     generate_search_response, generate_reservation_message, recommend_books,
     generate_chatbot_response, generate_suggest_book_reply,
+    generate_book_description, verify_book_is_real,
 )
 from backend.services.library_lms  import (
     search_books, check_availability,
@@ -244,18 +245,6 @@ def search():
 
 
 # ---------------------------------------------------------------------------
-# Book detail
-# ---------------------------------------------------------------------------
-
-@api.route("/books/<book_id>", methods=["GET"])
-def book_detail(book_id: str):
-    availability = check_availability(book_id)
-    if "error" in availability:
-        return jsonify(availability), 404
-    return jsonify(availability)
-
-
-# ---------------------------------------------------------------------------
 # All books catalogue listing
 # ---------------------------------------------------------------------------
 
@@ -289,7 +278,8 @@ def all_books():
 
 
 # ---------------------------------------------------------------------------
-# High-demand books listing
+# High-demand books listing  — must be registered BEFORE /books/<book_id>
+# so Flask does not match "high-demand" as a book_id variable.
 # ---------------------------------------------------------------------------
 
 @api.route("/books/high-demand", methods=["GET"])
@@ -297,6 +287,18 @@ def high_demand():
     threshold = int(request.args.get("threshold", 5))
     books = get_high_demand_books(threshold=threshold)
     return jsonify({"books": books, "total": len(books)})
+
+
+# ---------------------------------------------------------------------------
+# Book detail
+# ---------------------------------------------------------------------------
+
+@api.route("/books/<book_id>", methods=["GET"])
+def book_detail(book_id: str):
+    availability = check_availability(book_id)
+    if "error" in availability:
+        return jsonify(availability), 404
+    return jsonify(availability)
 
 
 # ---------------------------------------------------------------------------
@@ -529,7 +531,7 @@ def suggest_book():
     """
     POST /api/suggest-book
     Body: { "student_id": "s001", "title": "...", "author": "...", "reason": "..." }
-    Stores the suggestion and returns an AI acknowledgement.
+    Verifies the book is real, stores the suggestion, and returns an AI acknowledgement.
     """
     body       = request.get_json(force=True)
     student_id = body.get("student_id", "anonymous").strip()
@@ -540,16 +542,122 @@ def suggest_book():
     if not title:
         return jsonify({"error": "title is required"}), 400
 
-    # Persist suggestion to MongoDB
+    # Check if the book already exists in our catalogue
     db = get_db()
-    db.book_suggestions.insert_one({
-        "student_id": student_id,
-        "title":      title,
-        "author":     author,
-        "reason":     reason,
-        "status":     "pending",
-        "created_at": __import__("datetime").datetime.utcnow(),
-    })
+    existing = db.books.find_one(
+        {"title": {"$regex": f"^{title}$", "$options": "i"}},
+        {"_id": 1},
+    )
+    if existing:
+        return jsonify({
+            "reply": f'"{title}" is already in our catalogue — search for it to issue a copy!',
+            "title": title,
+            "author": author,
+            "already_exists": True,
+        }), 200
+
+    # Ask AI if the book is a real published title
+    is_real = verify_book_is_real(title, author or "Unknown")
+    if not is_real:
+        return jsonify({
+            "reply": f'We couldn\'t confirm "{title}" as a published book. Please double-check the title and author.',
+            "title": title,
+            "author": author,
+            "not_real": True,
+        }), 200
+
+    # Persist suggestion (avoid duplicates)
+    from datetime import datetime as _dt
+    db.book_suggestions.update_one(
+        {"title": {"$regex": f"^{title}$", "$options": "i"}},
+        {"$setOnInsert": {
+            "student_id": student_id,
+            "title":      title,
+            "author":     author or "Unknown",
+            "reason":     reason,
+            "status":     "pending",
+            "created_at": _dt.utcnow(),
+        }},
+        upsert=True,
+    )
 
     reply = generate_suggest_book_reply(title, author or "Unknown", reason or "No reason provided")
     return jsonify({"reply": reply, "title": title, "author": author}), 201
+
+
+# ---------------------------------------------------------------------------
+# Suggested books (real books students suggested, not yet in catalogue)
+# ---------------------------------------------------------------------------
+
+@api.route("/suggestions", methods=["GET"])
+def get_suggestions():
+    """
+    GET /api/suggestions
+    Returns pending book suggestions that are confirmed real and not yet in the catalogue.
+    Each result includes an AI-generated one-sentence description.
+    """
+    db = get_db()
+    cursor = db.book_suggestions.find(
+        {"status": "pending"},
+        {"_id": 0, "title": 1, "author": 1, "reason": 1, "created_at": 1},
+    ).sort("created_at", -1).limit(20)
+
+    suggestions = []
+    for doc in cursor:
+        title  = doc.get("title", "")
+        author = doc.get("author", "Unknown")
+        # Generate a short description (cached — skip if already done)
+        try:
+            desc = generate_book_description(title, author)
+        except Exception:
+            desc = ""
+        suggestions.append({
+            "title":       title,
+            "author":      author,
+            "reason":      doc.get("reason", ""),
+            "description": desc,
+        })
+
+    return jsonify({"suggestions": suggestions, "total": len(suggestions)})
+
+
+# ---------------------------------------------------------------------------
+# On-demand book description (lazy, cached in DB)
+# ---------------------------------------------------------------------------
+
+@api.route("/book-description", methods=["POST"])
+def book_description():
+    """
+    POST /api/book-description
+    Body: { "book_id": "<id>" }
+    Returns (and caches) a one-sentence AI description for the book.
+    """
+    body    = request.get_json(force=True)
+    book_id = body.get("book_id", "").strip()
+    if not book_id:
+        return jsonify({"error": "book_id is required"}), 400
+
+    from bson import ObjectId
+    from bson.errors import InvalidId
+    db = get_db()
+    try:
+        obj_id = ObjectId(book_id)
+    except InvalidId:
+        return jsonify({"error": "Invalid book ID"}), 400
+
+    book = db.books.find_one({"_id": obj_id}, {"title": 1, "author": 1, "description": 1})
+    if not book:
+        return jsonify({"error": "Book not found"}), 404
+
+    # Return cached description if already stored
+    if book.get("description"):
+        return jsonify({"book_id": book_id, "description": book["description"]})
+
+    # Generate and cache
+    try:
+        desc = generate_book_description(book["title"], book.get("author", "Unknown"))
+    except Exception as exc:
+        return jsonify({"error": str(exc)[:120]}), 500
+
+    db.books.update_one({"_id": obj_id}, {"$set": {"description": desc}})
+    return jsonify({"book_id": book_id, "description": desc})

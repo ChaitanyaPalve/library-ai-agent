@@ -142,6 +142,16 @@ and that the library team will review it for acquisition.
 
 Response:"""
 
+_BOOK_DESCRIPTION_PROMPT = """Give a 1-sentence description of the book "{title}" by {author}.
+State what it is about and who it is for. No preamble, no quotes around the sentence.
+
+Description:"""
+
+_SUGGEST_VERIFY_PROMPT = """Is "{title}" by {author} a real published book?
+Reply with only YES or NO.
+
+Answer:"""
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -212,3 +222,29 @@ def generate_suggest_book_reply(title: str, author: str, reason: str) -> str:
     prompt = _SUGGEST_BOOK_PROMPT.format(title=title, author=author, reason=reason)
     result = model.generate_text(prompt=prompt)
     return result.strip() if isinstance(result, str) else result
+
+
+def generate_book_description(title: str, author: str) -> str:
+    """Return a one-sentence description for a book (token-efficient)."""
+    model = _get_model()
+    prompt = _BOOK_DESCRIPTION_PROMPT.format(title=title, author=author)
+    # Use a small token budget — one sentence is enough
+    from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GP
+    result = model.generate_text(
+        prompt=prompt,
+        params={GP.MAX_NEW_TOKENS: 60, GP.MIN_NEW_TOKENS: 10, GP.TEMPERATURE: 0.3},
+    )
+    return (result.strip() if isinstance(result, str) else result) or ""
+
+
+def verify_book_is_real(title: str, author: str) -> bool:
+    """Ask the model whether the book title/author combination is a real book."""
+    model = _get_model()
+    prompt = _SUGGEST_VERIFY_PROMPT.format(title=title, author=author)
+    from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GP
+    result = model.generate_text(
+        prompt=prompt,
+        params={GP.MAX_NEW_TOKENS: 5, GP.MIN_NEW_TOKENS: 1, GP.TEMPERATURE: 0.0},
+    )
+    answer = (result.strip() if isinstance(result, str) else result).upper()
+    return answer.startswith("YES")
